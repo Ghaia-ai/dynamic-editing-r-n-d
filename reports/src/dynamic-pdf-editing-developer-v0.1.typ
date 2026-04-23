@@ -73,27 +73,27 @@ The incumbent PDF fill path in #chip("npc-pr-agent") assumes a human-curated #ch
 #panel(title: "PDFFieldDefinition fields", color: colors.primary)[
   #set text(size: 8.8pt)
   #table(
-    columns: (auto, auto, 2fr, auto),
+    columns: (2.2fr, 1.2fr, 4.5fr, 1.8fr),
     stroke: none,
-    inset: (x: 6pt, y: 6pt),
-    align: (left, left, left, center),
+    inset: (x: 6pt, y: 7pt),
+    align: (left + horizon, left + horizon, left + horizon, left + horizon),
     table.header(
       table.cell(fill: colors.ink)[Field],
       table.cell(fill: colors.ink)[Required],
-      table.cell(fill: colors.ink)[How a new approach supplies it],
+      table.cell(fill: colors.ink)[Supply via],
       table.cell(fill: colors.ink)[Today],
     ),
-    [#chip("field_key")], [yes], [snake_case id; synthesised from label or LLM-labelled], tag("manual", color: colors.danger),
+    [#chip("field_key")], [yes], [synth from label or LLM label], tag("manual", color: colors.danger),
     table.hline(stroke: 0.3pt + colors.rule),
-    [#chip("label")], [yes], [human-readable; detected or LLM-labelled], tag("manual", color: colors.danger),
+    [#chip("label")], [yes], [detected or LLM label], tag("manual", color: colors.danger),
     table.hline(stroke: 0.3pt + colors.rule),
     [#chip("current_value")], [yes], [extracted text inside the bbox], tag("manual", color: colors.danger),
     table.hline(stroke: 0.3pt + colors.rule),
-    [#chip("search_pattern")], [yes (can become optional)], [literal current_value, or unused when bbox is authoritative], tag("brittle", color: colors.danger),
+    [#chip("search_pattern")], [yes (can demote)], [literal current_value, or unused when bbox authoritative], tag("brittle", color: colors.danger),
     table.hline(stroke: 0.3pt + colors.rule),
     [#chip("page")], [yes], [page index], tag("manual", color: colors.danger),
     table.hline(stroke: 0.3pt + colors.rule),
-    [#chip("bbox")], [optional today], [produced by extract or layout-AI], tag("present, unused", color: colors.warning, variant: "solid"),
+    [#chip("bbox")], [optional today], [produced by extract or layout-AI], tag("unused", color: colors.warning, variant: "solid"),
     table.hline(stroke: 0.3pt + colors.rule),
     [#chip("color"), #chip("fontsize_factor"), #chip("format_hint"), #chip("bg_color")], [optional], [inferred from extracted span, or defaults], tag("defaults", color: colors.muted),
     table.hline(stroke: 0.3pt + colors.rule),
@@ -410,10 +410,10 @@ These are the paths in #chip("npc-pr-agent") that the integration work will modi
 #panel(title: "Upstream change set under seam 2 + seam 1", color: colors.primary)[
   #set text(size: 9pt)
   #table(
-    columns: (1.5fr, auto, 2fr),
+    columns: (3.2fr, 1fr, 4fr),
     stroke: none,
-    inset: (x: 6pt, y: 6pt),
-    align: (left, center, left),
+    inset: (x: 6pt, y: 7pt),
+    align: (left + horizon, left + horizon, left + horizon),
     table.header(
       table.cell(fill: colors.ink)[Path],
       table.cell(fill: colors.ink)[Kind],

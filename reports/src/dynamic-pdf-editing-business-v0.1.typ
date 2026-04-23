@@ -105,10 +105,10 @@ We distilled the brief's exploration surface into four approaches, ranked by int
 #panel(title: "Approach matrix after Phase 2", color: colors.primary)[
   #set text(size: 9pt)
   #table(
-    columns: (auto, 2fr, 2fr, auto),
+    columns: (1.7fr, 3.2fr, 2.6fr, 1fr),
     stroke: none,
     inset: (x: 6pt, y: 7pt),
-    align: (left, left, left, center),
+    align: (left + horizon, left + horizon, left + horizon, center + horizon),
     table.header(
       table.cell(fill: colors.ink)[Approach],
       table.cell(fill: colors.ink)[Idea],
