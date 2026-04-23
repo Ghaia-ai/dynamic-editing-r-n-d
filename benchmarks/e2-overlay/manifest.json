@@ -1,0 +1,26 @@
+{
+  "edits": [
+    {
+      "sample": "qms_psa_121_feb_2024_poster.pdf",
+      "page": 0,
+      "bbox": [551.4, 56.9, 594.9, 77.1],
+      "original_text": "135,238",
+      "new_text": "150,000",
+      "font_hint": "Lusail-Bold",
+      "fontsize_hint": 14.0,
+      "origin_hint": null,
+      "rationale": "numeric statistic on solid-colour panel; same-width replacement; embedded font; top-of-page minimises pagination effects"
+    },
+    {
+      "sample": "water_infographics_en_filled.pdf",
+      "page": 1,
+      "bbox": [407.5, 684.6, 451.7, 724.4],
+      "original_text": "669",
+      "new_text": "700",
+      "font_hint": "Lusail-Bd",
+      "fontsize_hint": 28.1,
+      "origin_hint": null,
+      "rationale": "large numeric value; same-width 3-char replacement; embedded font; clear surrounding whitespace for masked ssim"
+    }
+  ]
+}
