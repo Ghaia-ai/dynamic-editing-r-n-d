@@ -9,7 +9,7 @@ this is a focused R&D project to investigate and prototype a dynamic PDF editing
 the problem (from the initiating brief): the target PDFs behave like flattened visual canvases rather than structured documents. text elements are positioned arbitrarily, with no reliable semantic mapping between headings, labels, and their corresponding values. each PDF has a unique layout, no reusable template exists, and users need to upload such PDFs and modify specific values dynamically while preserving exact visual design, layout precision, and formatting fidelity.
 
 **repo:** `Ghaia-ai/dynamic-editing-r-n-d`
-**tracking (single source of truth):** clickup list `901813626574` -- https://app.clickup.com/90181533002/v/l/f/901813626574?pr=901810347592
+**tracking (single source of truth):** clickup list `901817609894` (inside folder `901813626574` "R&D NPC Dynamic PDF Editing", space `901810347592` "R&D") -- https://app.clickup.com/90181533002/v/l/f/901813626574?pr=901810347592
 **solution repo (downstream integration target):** `Ghaia-ai/npc-pr-agent` at `/Users/elaabouazza/Desktop/Ghaia/npc-pr-agent`
   - relevant workflows: `src/workflows/fill_poster/`, `src/workflows/upgrade_poster/`, `src/workflows/infographic/`
   - relevant services: `src/services/visual_content/` (template_analyzer, template_filler, text_fitter, rendering_service)
@@ -25,7 +25,7 @@ the problem (from the initiating brief): the target PDFs behave like flattened v
 *   no emojis are allowed in any communication or documentation.
 *   all filenames must be in lowercase.
 *   do not add claude code attribution or co-authoring footer to git commits.
-*   **tracking is exclusively done in clickup list `901813626574`.** do not open github issues or github projects for this R&D; surface gaps, bugs, and follow-ups as clickup tasks.
+*   **tracking is exclusively done in clickup list `901817609894` (inside folder `901813626574` "R&D NPC Dynamic PDF Editing", space `901810347592` "R&D").** do not open github issues or github projects for this R&D; surface gaps, bugs, and follow-ups as clickup tasks.
 *   **commit cadence: commit at the end of every logical unit of work.** a "logical unit" = one research note, one benchmark implemented, one experiment analysed, one report section written, one scaffolding change landed. do not batch unrelated changes into a single commit. if a change is non-trivial and takes more than ~30 minutes, land a wip commit mid-way so intermediate state is recoverable.
 *   backend: python 3.11+.
 *   when updating environment variables or secrets, always modify `.env` files directly -- never modify `.env.example` files during runtime configuration. `.env.example` is a template for onboarding; `.env` is the live config.
@@ -257,7 +257,7 @@ all infrastructure must live in the **ghaia-r-n-d** resource group under the **G
 
 ## task tracking (clickup)
 
-tracking is exclusively in clickup list `901813626574` -- https://app.clickup.com/90181533002/v/l/f/901813626574?pr=901810347592. do not open github issues or github projects for this R&D.
+tracking is exclusively in clickup list `901817609894` (inside folder `901813626574` "R&D NPC Dynamic PDF Editing", space `901810347592` "R&D") -- https://app.clickup.com/90181533002/v/l/f/901813626574?pr=901810347592. do not open github issues or github projects for this R&D.
 
 ### title format
 ```
