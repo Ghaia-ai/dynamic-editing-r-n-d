@@ -1,0 +1,38 @@
+# secrets and env
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# node / tooling (in case we prototype HTML conversion with node tools)
+node_modules/
+dist/
+build/
+
+# benchmark artifacts (kept out of git; structured JSON summaries live alongside experiments)
+benchmarks/results/**
+!benchmarks/results/.gitkeep
+
+# research raw assets can be large; commit only curated subsets
+research/raw/**/*.zip
+research/raw/**/*.mp4
+
+# generated pdfs / renders from experiments
+reports/out/
+diagrams/out/
+
+# os / editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
