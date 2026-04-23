@@ -1,0 +1,415 @@
+{
+  "experiment": "e2-overlay",
+  "started_at": "2026-04-23T13:35:15.341951+00:00",
+  "environment": {
+    "python": "3.12.7",
+    "platform": "macOS-26.3-arm64-arm-64bit",
+    "pymupdf": "1.24.13",
+    "cold_run": true
+  },
+  "samples_root": "datasets/samples",
+  "kill_criterion": "masked_ssim on edited page < 0.99",
+  "killed": false,
+  "results": [
+    {
+      "sample": "qms_psa_121_feb_2024_poster.pdf",
+      "status": "ok",
+      "edit": {
+        "sample": "qms_psa_121_feb_2024_poster.pdf",
+        "page": 0,
+        "bbox": [
+          551.4,
+          56.9,
+          594.9,
+          77.1
+        ],
+        "original_text": "135,238",
+        "new_text": "150,000",
+        "font_hint": "Lusail-Bold",
+        "fontsize_hint": 14.0,
+        "origin_hint": null,
+        "rationale": "latin numeric statistic on solid-colour panel; same-width replacement; embedded font"
+      },
+      "trace": {
+        "page": 0,
+        "bbox": [
+          551.4,
+          56.9,
+          594.9,
+          77.1
+        ],
+        "new_text": "150,000",
+        "font_hint": "Lusail-Bold",
+        "fontsize": 14.0,
+        "bg_sample_rgb": [
+          0.8607843137254902,
+          0.8725490196078431,
+          0.884313725490196
+        ],
+        "font_registered": true,
+        "insert_ok": true,
+        "readback": "150,000",
+        "fonts_available": [
+          "Lusail-Bold",
+          "Lusail-Light",
+          "Lusail-Medium",
+          "Lusail-Regular"
+        ]
+      },
+      "overlay_seconds": 0.131,
+      "fidelity_seconds": 3.853,
+      "fidelity_masked_edited_only": {
+        "dpi": 150,
+        "metric_version": "1.0",
+        "pages": [
+          {
+            "page_index": 0,
+            "dpi": 150,
+            "ssim": 0.9997655412921865,
+            "mae": 0.013829967725204013,
+            "status": "ok"
+          }
+        ],
+        "aggregates": {
+          "ssim_mean": 0.9997655412921865,
+          "mae_mean": 0.013829967725204013,
+          "n_pages_ok": 1,
+          "n_pages_total": 1
+        }
+      },
+      "fidelity_combined": {
+        "dpi": 150,
+        "metric_version": "1.0",
+        "pages": [
+          {
+            "page_index": 0,
+            "dpi": 150,
+            "ssim": 0.9997655412921865,
+            "mae": 0.013829967725204013,
+            "status": "ok"
+          },
+          {
+            "page_index": 1,
+            "dpi": 150,
+            "ssim": 1.0,
+            "mae": 0.0,
+            "status": "ok"
+          }
+        ],
+        "aggregates": {
+          "ssim_mean": 0.9998827706460933,
+          "mae_mean": 0.006914983862602007,
+          "n_pages_ok": 2,
+          "n_pages_total": 2
+        }
+      },
+      "mask_pad_pt": 3.0
+    },
+    {
+      "sample": "water_infographics_en_filled.pdf",
+      "status": "ok",
+      "edit": {
+        "sample": "water_infographics_en_filled.pdf",
+        "page": 1,
+        "bbox": [
+          407.5,
+          684.6,
+          451.7,
+          724.4
+        ],
+        "original_text": "669",
+        "new_text": "700",
+        "font_hint": "Lusail-Bd",
+        "fontsize_hint": 28.1,
+        "origin_hint": null,
+        "rationale": "large latin numeric; same-width 3-char replacement; embedded font"
+      },
+      "trace": {
+        "page": 1,
+        "bbox": [
+          407.5,
+          684.6,
+          451.7,
+          724.4
+        ],
+        "new_text": "700",
+        "font_hint": "Lusail-Bd",
+        "fontsize": 28.1,
+        "bg_sample_rgb": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "font_registered": true,
+        "insert_ok": true,
+        "readback": "700",
+        "fonts_available": [
+          "Lusail-Bd"
+        ]
+      },
+      "overlay_seconds": 0.025,
+      "fidelity_seconds": 5.035,
+      "fidelity_masked_edited_only": {
+        "dpi": 150,
+        "metric_version": "1.0",
+        "pages": [
+          {
+            "page_index": 1,
+            "dpi": 150,
+            "ssim": 1.0,
+            "mae": 0.0,
+            "status": "ok"
+          }
+        ],
+        "aggregates": {
+          "ssim_mean": 1.0,
+          "mae_mean": 0.0,
+          "n_pages_ok": 1,
+          "n_pages_total": 1
+        }
+      },
+      "fidelity_combined": {
+        "dpi": 150,
+        "metric_version": "1.0",
+        "pages": [
+          {
+            "page_index": 0,
+            "dpi": 150,
+            "ssim": 1.0,
+            "mae": 0.0,
+            "status": "ok"
+          },
+          {
+            "page_index": 1,
+            "dpi": 150,
+            "ssim": 1.0,
+            "mae": 0.0,
+            "status": "ok"
+          },
+          {
+            "page_index": 2,
+            "dpi": 150,
+            "ssim": 1.0,
+            "mae": 0.0,
+            "status": "ok"
+          },
+          {
+            "page_index": 3,
+            "dpi": 150,
+            "ssim": 1.0,
+            "mae": 0.0,
+            "status": "ok"
+          },
+          {
+            "page_index": 4,
+            "dpi": 150,
+            "ssim": 1.0,
+            "mae": 0.0,
+            "status": "ok"
+          }
+        ],
+        "aggregates": {
+          "ssim_mean": 1.0,
+          "mae_mean": 0.0,
+          "n_pages_ok": 5,
+          "n_pages_total": 5
+        }
+      },
+      "mask_pad_pt": 3.0
+    },
+    {
+      "sample": "qms_psa_121_feb_2024_poster.pdf",
+      "status": "ok",
+      "edit": {
+        "sample": "qms_psa_121_feb_2024_poster.pdf",
+        "page": 1,
+        "bbox": [
+          42.694,
+          229.071,
+          68.962,
+          245.055
+        ],
+        "original_text": "\u0645\u0648\u0627\u0644\u064a\u062f",
+        "new_text": "\u0645\u0648\u0627\u0644\u064a\u062f",
+        "font_hint": "Lusail-Regular",
+        "fontsize_hint": 12.0,
+        "origin_hint": [
+          63.058,
+          239.967
+        ],
+        "rationale": "E5 arabic round-trip test: re-insert the same arabic label at its own bbox. if this alone fails (bidi mishandled or font glyphs missing), arabic kills approach c before we even try a *different* replacement value"
+      },
+      "trace": {
+        "page": 1,
+        "bbox": [
+          42.694,
+          229.071,
+          68.962,
+          245.055
+        ],
+        "new_text": "\u0645\u0648\u0627\u0644\u064a\u062f",
+        "font_hint": "Lusail-Regular",
+        "fontsize": 12.0,
+        "bg_sample_rgb": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "font_registered": true,
+        "insert_ok": true,
+        "readback": "\u0645",
+        "fonts_available": [
+          "Lusail-Bold",
+          "Lusail-Light",
+          "Lusail-Medium",
+          "Lusail-Regular"
+        ]
+      },
+      "overlay_seconds": 0.076,
+      "fidelity_seconds": 3.562,
+      "fidelity_masked_edited_only": {
+        "dpi": 150,
+        "metric_version": "1.0",
+        "pages": [
+          {
+            "page_index": 1,
+            "dpi": 150,
+            "ssim": 0.9997828739764083,
+            "mae": 0.014198048360947787,
+            "status": "ok"
+          }
+        ],
+        "aggregates": {
+          "ssim_mean": 0.9997828739764083,
+          "mae_mean": 0.014198048360947787,
+          "n_pages_ok": 1,
+          "n_pages_total": 1
+        }
+      },
+      "fidelity_combined": {
+        "dpi": 150,
+        "metric_version": "1.0",
+        "pages": [
+          {
+            "page_index": 0,
+            "dpi": 150,
+            "ssim": 1.0,
+            "mae": 0.0,
+            "status": "ok"
+          },
+          {
+            "page_index": 1,
+            "dpi": 150,
+            "ssim": 0.9997828739764083,
+            "mae": 0.014198048360947787,
+            "status": "ok"
+          }
+        ],
+        "aggregates": {
+          "ssim_mean": 0.9998914369882042,
+          "mae_mean": 0.007099024180473893,
+          "n_pages_ok": 2,
+          "n_pages_total": 2
+        }
+      },
+      "mask_pad_pt": 3.0
+    },
+    {
+      "sample": "qms_psa_121_feb_2024_poster.pdf",
+      "status": "ok",
+      "edit": {
+        "sample": "qms_psa_121_feb_2024_poster.pdf",
+        "page": 1,
+        "bbox": [
+          41.338,
+          262.743,
+          68.962,
+          278.727
+        ],
+        "original_text": "\u0648\u0641\u064a\u0627\u062a",
+        "new_text": "\u0648\u0641\u064a\u0627\u062a",
+        "font_hint": "Lusail-Regular",
+        "fontsize_hint": 12.0,
+        "origin_hint": [
+          63.766,
+          273.639
+        ],
+        "rationale": "E5 second arabic round-trip ('deaths'); confirms first result is not a one-off"
+      },
+      "trace": {
+        "page": 1,
+        "bbox": [
+          41.338,
+          262.743,
+          68.962,
+          278.727
+        ],
+        "new_text": "\u0648\u0641\u064a\u0627\u062a",
+        "font_hint": "Lusail-Regular",
+        "fontsize": 12.0,
+        "bg_sample_rgb": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "font_registered": true,
+        "insert_ok": true,
+        "readback": "\u0648",
+        "fonts_available": [
+          "Lusail-Bold",
+          "Lusail-Light",
+          "Lusail-Medium",
+          "Lusail-Regular"
+        ]
+      },
+      "overlay_seconds": 0.067,
+      "fidelity_seconds": 3.657,
+      "fidelity_masked_edited_only": {
+        "dpi": 150,
+        "metric_version": "1.0",
+        "pages": [
+          {
+            "page_index": 1,
+            "dpi": 150,
+            "ssim": 0.9997424452952015,
+            "mae": 0.014583171266855304,
+            "status": "ok"
+          }
+        ],
+        "aggregates": {
+          "ssim_mean": 0.9997424452952015,
+          "mae_mean": 0.014583171266855304,
+          "n_pages_ok": 1,
+          "n_pages_total": 1
+        }
+      },
+      "fidelity_combined": {
+        "dpi": 150,
+        "metric_version": "1.0",
+        "pages": [
+          {
+            "page_index": 0,
+            "dpi": 150,
+            "ssim": 1.0,
+            "mae": 0.0,
+            "status": "ok"
+          },
+          {
+            "page_index": 1,
+            "dpi": 150,
+            "ssim": 0.9997424452952015,
+            "mae": 0.014583171266855304,
+            "status": "ok"
+          }
+        ],
+        "aggregates": {
+          "ssim_mean": 0.9998712226476008,
+          "mae_mean": 0.007291585633427652,
+          "n_pages_ok": 2,
+          "n_pages_total": 2
+        }
+      },
+      "mask_pad_pt": 3.0
+    }
+  ]
+}

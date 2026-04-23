@@ -9,7 +9,7 @@
       "font_hint": "Lusail-Bold",
       "fontsize_hint": 14.0,
       "origin_hint": null,
-      "rationale": "numeric statistic on solid-colour panel; same-width replacement; embedded font; top-of-page minimises pagination effects"
+      "rationale": "latin numeric statistic on solid-colour panel; same-width replacement; embedded font"
     },
     {
       "sample": "water_infographics_en_filled.pdf",
@@ -20,7 +20,29 @@
       "font_hint": "Lusail-Bd",
       "fontsize_hint": 28.1,
       "origin_hint": null,
-      "rationale": "large numeric value; same-width 3-char replacement; embedded font; clear surrounding whitespace for masked ssim"
+      "rationale": "large latin numeric; same-width 3-char replacement; embedded font"
+    },
+    {
+      "sample": "qms_psa_121_feb_2024_poster.pdf",
+      "page": 1,
+      "bbox": [42.694, 229.071, 68.962, 245.055],
+      "original_text": "مواليد",
+      "new_text": "مواليد",
+      "font_hint": "Lusail-Regular",
+      "fontsize_hint": 12.0,
+      "origin_hint": [63.058, 239.967],
+      "rationale": "E5 arabic round-trip test: re-insert the same arabic label at its own bbox. if this alone fails (bidi mishandled or font glyphs missing), arabic kills approach c before we even try a *different* replacement value"
+    },
+    {
+      "sample": "qms_psa_121_feb_2024_poster.pdf",
+      "page": 1,
+      "bbox": [41.338, 262.743, 68.962, 278.727],
+      "original_text": "وفيات",
+      "new_text": "وفيات",
+      "font_hint": "Lusail-Regular",
+      "fontsize_hint": 12.0,
+      "origin_hint": [63.766, 273.639],
+      "rationale": "E5 second arabic round-trip ('deaths'); confirms first result is not a one-off"
     }
   ]
 }
