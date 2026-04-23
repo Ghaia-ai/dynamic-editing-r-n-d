@@ -1,0 +1,179 @@
+{
+  "experiment": "e1-extract",
+  "started_at": "2026-04-23T12:03:41.546871+00:00",
+  "environment": {
+    "python": "3.12.7",
+    "platform": "macOS-26.3-arm64-arm-64bit",
+    "pymupdf": "1.24.13",
+    "pdfplumber": "0.11.4",
+    "cold_run": true
+  },
+  "samples_root": "datasets/samples",
+  "kill_criterion": "ssim_mean < 0.90 on all samples",
+  "killed": true,
+  "results": [
+    {
+      "sample": "qms_psa_121_feb_2024_poster.pdf",
+      "status": "ok",
+      "n_pages": 2,
+      "pymupdf": {
+        "span_count": 325,
+        "extract_seconds": 0.077
+      },
+      "pdfplumber": {
+        "word_count": 690,
+        "extract_seconds": 1.24
+      },
+      "rerender_seconds": 0.147,
+      "fidelity_seconds": 1.297,
+      "fidelity": {
+        "dpi": 150,
+        "metric_version": "1.0",
+        "pages": [
+          {
+            "page_index": 0,
+            "dpi": 150,
+            "ssim": 0.7158077623901963,
+            "mae": 22.41430555789692,
+            "status": "ok"
+          },
+          {
+            "page_index": 1,
+            "dpi": 150,
+            "ssim": 0.7295990221508976,
+            "mae": 18.8732500650899,
+            "status": "ok"
+          }
+        ],
+        "aggregates": {
+          "ssim_mean": 0.7227033922705469,
+          "mae_mean": 20.643777811493408,
+          "n_pages_ok": 2,
+          "n_pages_total": 2
+        }
+      },
+      "bbox_agreement_per_page": [
+        {
+          "page": 0,
+          "pymupdf_spans": 160,
+          "pdfplumber_words": 353,
+          "pymupdf_spans_covered": 132,
+          "pdfplumber_words_inside_a_span": 353,
+          "iou_threshold": 0.3
+        },
+        {
+          "page": 1,
+          "pymupdf_spans": 165,
+          "pdfplumber_words": 337,
+          "pymupdf_spans_covered": 131,
+          "pdfplumber_words_inside_a_span": 337,
+          "iou_threshold": 0.3
+        }
+      ]
+    },
+    {
+      "sample": "water_infographics_en_filled.pdf",
+      "status": "ok",
+      "n_pages": 5,
+      "pymupdf": {
+        "span_count": 125,
+        "extract_seconds": 0.051
+      },
+      "pdfplumber": {
+        "word_count": 286,
+        "extract_seconds": 0.418
+      },
+      "rerender_seconds": 0.058,
+      "fidelity_seconds": 1.326,
+      "fidelity": {
+        "dpi": 150,
+        "metric_version": "1.0",
+        "pages": [
+          {
+            "page_index": 0,
+            "dpi": 150,
+            "ssim": 0.8166270397705565,
+            "mae": 46.550040106325405,
+            "status": "ok"
+          },
+          {
+            "page_index": 1,
+            "dpi": 150,
+            "ssim": 0.834621617888856,
+            "mae": 17.07036876074058,
+            "status": "ok"
+          },
+          {
+            "page_index": 2,
+            "dpi": 150,
+            "ssim": 0.8302371774514729,
+            "mae": 16.908124509390454,
+            "status": "ok"
+          },
+          {
+            "page_index": 3,
+            "dpi": 150,
+            "ssim": 0.8426004128038059,
+            "mae": 17.3400250714303,
+            "status": "ok"
+          },
+          {
+            "page_index": 4,
+            "dpi": 150,
+            "ssim": 0.8941724665462715,
+            "mae": 11.191123102682912,
+            "status": "ok"
+          }
+        ],
+        "aggregates": {
+          "ssim_mean": 0.8436517428921926,
+          "mae_mean": 21.81193631011393,
+          "n_pages_ok": 5,
+          "n_pages_total": 5
+        }
+      },
+      "bbox_agreement_per_page": [
+        {
+          "page": 0,
+          "pymupdf_spans": 2,
+          "pdfplumber_words": 7,
+          "pymupdf_spans_covered": 1,
+          "pdfplumber_words_inside_a_span": 7,
+          "iou_threshold": 0.3
+        },
+        {
+          "page": 1,
+          "pymupdf_spans": 35,
+          "pdfplumber_words": 94,
+          "pymupdf_spans_covered": 21,
+          "pdfplumber_words_inside_a_span": 94,
+          "iou_threshold": 0.3
+        },
+        {
+          "page": 2,
+          "pymupdf_spans": 24,
+          "pdfplumber_words": 48,
+          "pymupdf_spans_covered": 17,
+          "pdfplumber_words_inside_a_span": 48,
+          "iou_threshold": 0.3
+        },
+        {
+          "page": 3,
+          "pymupdf_spans": 34,
+          "pdfplumber_words": 88,
+          "pymupdf_spans_covered": 20,
+          "pdfplumber_words_inside_a_span": 88,
+          "iou_threshold": 0.3
+        },
+        {
+          "page": 4,
+          "pymupdf_spans": 30,
+          "pdfplumber_words": 49,
+          "pymupdf_spans_covered": 29,
+          "pdfplumber_words_inside_a_span": 49,
+          "iou_threshold": 0.3
+        }
+      ]
+    }
+  ]
+}
