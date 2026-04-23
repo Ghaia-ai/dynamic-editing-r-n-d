@@ -9,12 +9,14 @@ this is a focused R&D project to investigate and prototype a dynamic PDF editing
 the problem (from the initiating brief): the target PDFs behave like flattened visual canvases rather than structured documents. text elements are positioned arbitrarily, with no reliable semantic mapping between headings, labels, and their corresponding values. each PDF has a unique layout, no reusable template exists, and users need to upload such PDFs and modify specific values dynamically while preserving exact visual design, layout precision, and formatting fidelity.
 
 **repo:** `Ghaia-ai/dynamic-editing-r-n-d`
-**github project:** `r-n-d-prototypes` (org-level, Ghaia-ai)
+**tracking (single source of truth):** clickup list `901813626574` -- https://app.clickup.com/90181533002/v/l/f/901813626574?pr=901810347592
 **solution repo (downstream integration target):** `Ghaia-ai/npc-pr-agent` at `/Users/elaabouazza/Desktop/Ghaia/npc-pr-agent`
   - relevant workflows: `src/workflows/fill_poster/`, `src/workflows/upgrade_poster/`, `src/workflows/infographic/`
   - relevant services: `src/services/visual_content/` (template_analyzer, template_filler, text_fitter, rendering_service)
-**initiating ticket:** clickup `86ewuq5my` (R&D required: dynamic pdf editing approach for poster workflow)
-**initiating brief:** `dynamic-pdf-rnd1.pdf` (email from minhal abdul sami, 2026-04-13)
+  - pdf edit engine today: `src/services/pdf/pdf_editor.py` + `src/services/pdf/pdf_analyzer.py`
+**initiating ticket:** clickup `86ewuq5my` -- https://app.clickup.com/t/86ewuq5my (R&D required: dynamic pdf editing approach for poster workflow)
+**initiating brief:** `research/raw/2026-04-13_email_minhal_dynamic-pdf-rnd.pdf`
+**bug context:** `research/wiki/bug-context.md` -- read this before proposing an approach
 
 ---
 
@@ -23,13 +25,13 @@ the problem (from the initiating brief): the target PDFs behave like flattened v
 *   no emojis are allowed in any communication or documentation.
 *   all filenames must be in lowercase.
 *   do not add claude code attribution or co-authoring footer to git commits.
-*   when a new gap, bug, or feature idea comes up during work, create a github issue on `Ghaia-ai/dynamic-editing-r-n-d` using `gh issue create`. do not wait -- track it immediately so nothing is lost.
-*   **every issue created in the repo must be linked to the `r-n-d-prototypes` github project.** after creating an issue, always add it to the project and fill out all relevant project fields (status, priority, size, work type).
-*   **github issues are the single source of truth for task tracking.** all work items, priorities, and refinement live in issues.
+*   **tracking is exclusively done in clickup list `901813626574`.** do not open github issues or github projects for this R&D; surface gaps, bugs, and follow-ups as clickup tasks.
+*   **commit cadence: commit at the end of every logical unit of work.** a "logical unit" = one research note, one benchmark implemented, one experiment analysed, one report section written, one scaffolding change landed. do not batch unrelated changes into a single commit. if a change is non-trivial and takes more than ~30 minutes, land a wip commit mid-way so intermediate state is recoverable.
 *   backend: python 3.11+.
 *   when updating environment variables or secrets, always modify `.env` files directly -- never modify `.env.example` files during runtime configuration. `.env.example` is a template for onboarding; `.env` is the live config.
 *   research findings, benchmark results, and decision rationale go in the `research/` directory.
 *   each experiment should be self-contained with its own directory, README, and reproducible setup.
+*   sample pdfs and other shared datasets live in `datasets/` (top-level), grouped by source: `datasets/samples/` for the pdfs attached to the initiating brief, `datasets/<name>/` for future collections.
 *   **treat this phase as exploratory.** the expectation set by the brief is to identify viable approaches (with pros/cons), validate feasibility through quick experiments or prototypes, and recommend a scalable and maintainable solution -- not to ship a final implementation.
 *   **do not modify the solution repo (`npc-pr-agent`) from this repo.** cross-repo changes belong in a dedicated PR on that repo, opened only after an R&D direction is agreed.
 
@@ -106,11 +108,12 @@ before creating new code:
 ```
 dynamic-editing-rnd/
   CLAUDE.md                     # this file
+  datasets/                     # shared reference data
+    samples/                    # sample pdfs from the initiating brief
   research/                     # research findings, notes, comparisons
-    raw/                        # primary source material: vendor docs, sample pdfs, academic papers
+    raw/                        # primary source material: vendor docs, academic papers, briefs
     wiki/                       # synthesized analyses, citing sources in raw/
   benchmarks/                   # benchmark harness and experiment code
-    datasets/                   # shared test pdfs (sample posters, infographics)
     results/                    # raw benchmark results (gitignored large files)
   diagrams/                     # architecture diagrams, workflow sketches (excalidraw, mermaid)
   reports/
@@ -134,25 +137,18 @@ reports in this repo follow the same convention as `../avatar-r-n-d/reports/`:
 
 ## problem space and candidate approaches
 
-the brief frames four candidate approaches to evaluate. each should get at least one experiment in `research/` or `benchmarks/`:
+read `research/wiki/bug-context.md` first -- it re-frames the problem given the current `npc-pr-agent` implementation.
 
-1.  **pdf to structured format conversion**
-    *   can we reliably extract layout-aware data (text + positioning)?
-    *   tools to evaluate: pymupdf, pdfplumber, adobe pdf extract api, docling, unstructured.io
-    *   success metric: round-trip fidelity when re-rendering extracted data
+the bug-aware candidates (supersede the four in the brief):
 
-2.  **html-based editing workflow (pdf -> html -> pdf)**
-    *   feasibility of converting PDFs into pixel-perfect HTML/CSS
-    *   tools to evaluate: pdf2htmlex, mutool convert -F html, pdf.js, commercial converters
-    *   success metric: visual diff (ssim / per-pixel) against original after round-trip
+| # | approach | what it provides | primary risk |
+|---|---|---|---|
+| a | extract → auto-`PDFFieldDefinition` → existing editor | auto-templatization for pdfs | unreliable glyph reconstruction on illustrator/canva exports |
+| b | pdf → html → existing html template path → pdf | reuses the working html pipeline (`template_analyzer`) | round-trip visual fidelity |
+| c | overlay (original pdf + edit layer) | fidelity on non-edited regions is automatic | field detection + font matching at edit points |
+| d | layout-ai (as a primitive used by a/b/c) | "find the field" becomes solvable | cost, latency, hallucination |
 
-3.  **overlay-based editing**
-    *   keep the original PDF as an immutable background; place editable text layers on top at detected text boxes
-    *   success metric: user can change values without disturbing non-edited regions
-
-4.  **ai-assisted layout understanding**
-    *   detect regions, labels, and values dynamically (e.g. layoutlm, doclaynet, donut, gpt-4o vision)
-    *   success metric: precision/recall on label-value pair detection across the sample set
+the full experiment sequence, gates, and kill criteria live in `research/wiki/research-strategy.md`.
 
 ### user workflow dimension
 
@@ -181,6 +177,7 @@ separately from the technical approach, evaluate:
 -   every benchmark must be reproducible: pin versions, document setup steps, seed random
 -   capture: extraction latency, rendering latency, visual fidelity (ssim/pixel diff), token/cost where applicable
 -   results stored as structured json in `benchmarks/results/`
+-   test inputs pulled from `datasets/` (never hardcode absolute paths); record which dataset + file was used in every result json
 -   each experiment gets a README with hypothesis, methodology, results summary
 
 ---
@@ -258,11 +255,9 @@ all infrastructure must live in the **ghaia-r-n-d** resource group under the **G
 
 ---
 
-## issue creation protocol
+## task tracking (clickup)
 
-when creating issues on `Ghaia-ai/dynamic-editing-r-n-d`, follow this format exactly.
-
-**critical: every issue must be linked to the `r-n-d-prototypes` github project immediately after creation.**
+tracking is exclusively in clickup list `901813626574` -- https://app.clickup.com/90181533002/v/l/f/901813626574?pr=901810347592. do not open github issues or github projects for this R&D.
 
 ### title format
 ```
@@ -271,34 +266,11 @@ when creating issues on `Ghaia-ai/dynamic-editing-r-n-d`, follow this format exa
 
 suggested domains: `Extract`, `Render`, `Overlay`, `HtmlRoundtrip`, `LayoutAI`, `Benchmarks`, `Integration`, `Infra`, `Docs`.
 
-### project fields (set on the `r-n-d-prototypes` project board)
-
-| field | options |
-|-------|---------|
-| Status | Backlog, Explore, Design, Build, Validate, Done |
-| Work Type | Research, Spike, Benchmark, Feature, Bug, Tech Debt |
-| Priority | Critical, High, Medium, Low |
-| Size | XS, S, M, L, XL |
-
-### labels
-
-**work type tags:**
--   `benchmark`, `research`, `infra`, `dataset`
-
-**approach tags (this R&D):**
--   `approach:extract`, `approach:html-roundtrip`, `approach:overlay`, `approach:layout-ai`
-
-**workflow signals:**
--   `blocked` -- waiting on another issue or external dependency
--   `needs-decision` -- requires architecture call
--   `quick-win` -- under a day, good for momentum
--   `has-spec` -- issue body is a complete implementation spec
-
-### issue body
+### task body
 
 ```markdown
 ## context
-[1-2 sentences. what triggered this. link parent issue if sub-issue.]
+[1-2 sentences. what triggered this. link parent task if a subtask.]
 
 ## problem / hypothesis
 [what's being investigated or what's wrong.]
@@ -311,15 +283,15 @@ suggested domains: `Extract`, `Render`, `Overlay`, `HtmlRoundtrip`, `LayoutAI`, 
 - [ ] [testable / measurable outcome]
 
 ## dependencies
-Blocks: #N | Blocked by: #N | Related: #N
+[parent / blocks / blocked by -- linked via clickup relationships]
 ```
 
 ### decomposition
 
--   experiment = parent issue (the what/why). sub-issues = tasks (the how).
--   each sub-issue should be completable in 1-3 hours.
--   max 7 sub-issues per parent. if more, split the experiment.
--   every sub-issue must map to a testable or measurable outcome.
+-   experiment = parent task (the what/why). subtasks = work items (the how).
+-   each subtask should be completable in 1-3 hours.
+-   max 7 subtasks per parent. if more, split the experiment.
+-   every subtask must map to a testable or measurable outcome.
 
 ---
 

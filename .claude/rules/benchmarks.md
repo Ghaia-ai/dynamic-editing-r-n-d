@@ -4,6 +4,7 @@ globs: ["benchmarks/**"]
 
 - all benchmark results go to `benchmarks/results/` as structured json. one file per run, named `{experiment}_{isoDate}_{shortHash}.json`.
 - benchmark runs are reproducible or they don't exist: pin every version in the experiment's requirements file, seed all randomness, record the exact dataset path.
+- test inputs come from the top-level `datasets/` directory (e.g. `datasets/samples/qms_psa_121_feb_2024_poster.pdf`). reference by relative path; never hardcode absolute paths. record which dataset + file each result used in the json.
 - visual fidelity benchmarks must report at least two metrics: per-pixel mae and ssim. optionally include a perceptual metric (lpips) when comparing text-heavy regions.
 - latency numbers are meaningless without an environment block in the json: python version, os, cpu model, whether the run was cold or warm.
 - never commit raw pdf renders, ground-truth images, or large pickles. the results json summarizes; artifacts stay local.

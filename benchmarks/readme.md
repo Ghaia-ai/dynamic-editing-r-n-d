@@ -4,7 +4,7 @@ experiment harnesses and results for the dynamic pdf editing R&D.
 
 ## layout
 
-- `datasets/` -- shared test PDFs (sample posters, infographics). commit only small, license-safe samples.
+- test inputs live at the repo-top-level `datasets/` directory (e.g. `datasets/samples/qms_psa_121_feb_2024_poster.pdf`). benchmarks reference them by relative path, never by absolute path.
 - `results/` -- structured json outputs from benchmark runs. gitignored by default; commit only curated summaries referenced in a report.
 
 ## conventions

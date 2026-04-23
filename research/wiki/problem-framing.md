@@ -37,6 +37,6 @@ identify viable approaches with pros/cons, validate feasibility via quick experi
 
 ## next steps
 
-- [ ] stand up `benchmarks/datasets/` with the two sample PDFs attached to the brief (`qms_psa_121_feb_2024_poster.pdf`, `water_infographics_en_filled.pdf`) -- request from minhal.
-- [ ] write `wiki/approach-matrix.md` with a first-pass pros/cons.
-- [ ] scope first experiment: layout-aware extraction fidelity benchmark (pymupdf vs. pdfplumber vs. adobe pdf extract).
+- [x] sample pdfs landed in `datasets/samples/` (`qms_psa_121_feb_2024_poster.pdf`, `water_infographics_en_filled.pdf`).
+- [x] bug context from `npc-pr-agent` captured in `wiki/bug-context.md`.
+- [ ] follow the sequence in `wiki/research-strategy.md`.
