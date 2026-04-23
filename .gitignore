@@ -19,9 +19,11 @@ node_modules/
 dist/
 build/
 
-# benchmark artifacts (kept out of git; structured JSON summaries live alongside experiments)
-benchmarks/results/**
-!benchmarks/results/.gitkeep
+# benchmark artifacts: commit the result JSONs, ignore heavy renders + scratch
+benchmarks/**/.tmp/
+benchmarks/**/.venv/
+benchmarks/results/*.png
+benchmarks/results/*.pdf
 
 # research raw assets can be large; commit only curated subsets
 research/raw/**/*.zip
