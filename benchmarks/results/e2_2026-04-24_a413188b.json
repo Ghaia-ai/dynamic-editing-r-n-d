@@ -1,6 +1,6 @@
 {
   "experiment": "e2-overlay",
-  "started_at": "2026-04-23T13:35:15.341951+00:00",
+  "started_at": "2026-04-24T13:47:27.078975+00:00",
   "environment": {
     "python": "3.12.7",
     "platform": "macOS-26.3-arm64-arm-64bit",
@@ -8,12 +8,21 @@
     "cold_run": true
   },
   "samples_root": "datasets/samples",
-  "kill_criterion": "masked_ssim on edited page < 0.99",
-  "killed": false,
+  "kill_criterion": "masked_ssim < 0.99 on all edits, OR any edit fails readback == new_text integrity",
+  "killed": true,
+  "killed_by_ssim": false,
+  "killed_by_text_integrity": true,
+  "text_integrity_by_edit_index": {
+    "0": true,
+    "1": true,
+    "2": false,
+    "3": false
+  },
   "results": [
     {
       "sample": "qms_psa_121_feb_2024_poster.pdf",
       "status": "ok",
+      "edit_index": 0,
       "edit": {
         "sample": "qms_psa_121_feb_2024_poster.pdf",
         "page": 0,
@@ -56,8 +65,13 @@
           "Lusail-Regular"
         ]
       },
-      "overlay_seconds": 0.131,
-      "fidelity_seconds": 3.853,
+      "output_pdf": "benchmarks/e2-overlay/.tmp/qms_psa_121_feb_2024_poster_p0_e0.pdf",
+      "crops": {
+        "orig": "benchmarks/results/e2-crops/qms_psa_121_feb_2024_poster_p0_e0_orig.png",
+        "edited": "benchmarks/results/e2-crops/qms_psa_121_feb_2024_poster_p0_e0_edited.png"
+      },
+      "overlay_seconds": 0.174,
+      "fidelity_seconds": 4.455,
       "fidelity_masked_edited_only": {
         "dpi": 150,
         "metric_version": "1.0",
@@ -108,6 +122,7 @@
     {
       "sample": "water_infographics_en_filled.pdf",
       "status": "ok",
+      "edit_index": 1,
       "edit": {
         "sample": "water_infographics_en_filled.pdf",
         "page": 1,
@@ -147,8 +162,13 @@
           "Lusail-Bd"
         ]
       },
-      "overlay_seconds": 0.025,
-      "fidelity_seconds": 5.035,
+      "output_pdf": "benchmarks/e2-overlay/.tmp/water_infographics_en_filled_p1_e1.pdf",
+      "crops": {
+        "orig": "benchmarks/results/e2-crops/water_infographics_en_filled_p1_e1_orig.png",
+        "edited": "benchmarks/results/e2-crops/water_infographics_en_filled_p1_e1_edited.png"
+      },
+      "overlay_seconds": 0.012,
+      "fidelity_seconds": 7.297,
       "fidelity_masked_edited_only": {
         "dpi": 150,
         "metric_version": "1.0",
@@ -220,6 +240,7 @@
     {
       "sample": "qms_psa_121_feb_2024_poster.pdf",
       "status": "ok",
+      "edit_index": 2,
       "edit": {
         "sample": "qms_psa_121_feb_2024_poster.pdf",
         "page": 1,
@@ -265,8 +286,13 @@
           "Lusail-Regular"
         ]
       },
-      "overlay_seconds": 0.076,
-      "fidelity_seconds": 3.562,
+      "output_pdf": "benchmarks/e2-overlay/.tmp/qms_psa_121_feb_2024_poster_p1_e2.pdf",
+      "crops": {
+        "orig": "benchmarks/results/e2-crops/qms_psa_121_feb_2024_poster_p1_e2_orig.png",
+        "edited": "benchmarks/results/e2-crops/qms_psa_121_feb_2024_poster_p1_e2_edited.png"
+      },
+      "overlay_seconds": 0.177,
+      "fidelity_seconds": 14.368,
       "fidelity_masked_edited_only": {
         "dpi": 150,
         "metric_version": "1.0",
@@ -317,6 +343,7 @@
     {
       "sample": "qms_psa_121_feb_2024_poster.pdf",
       "status": "ok",
+      "edit_index": 3,
       "edit": {
         "sample": "qms_psa_121_feb_2024_poster.pdf",
         "page": 1,
@@ -362,8 +389,13 @@
           "Lusail-Regular"
         ]
       },
-      "overlay_seconds": 0.067,
-      "fidelity_seconds": 3.657,
+      "output_pdf": "benchmarks/e2-overlay/.tmp/qms_psa_121_feb_2024_poster_p1_e3.pdf",
+      "crops": {
+        "orig": "benchmarks/results/e2-crops/qms_psa_121_feb_2024_poster_p1_e3_orig.png",
+        "edited": "benchmarks/results/e2-crops/qms_psa_121_feb_2024_poster_p1_e3_edited.png"
+      },
+      "overlay_seconds": 0.181,
+      "fidelity_seconds": 10.321,
       "fidelity_masked_edited_only": {
         "dpi": 150,
         "metric_version": "1.0",

@@ -229,12 +229,46 @@ def render_shape(pdf_path: Path, page_index: int, dpi: int) -> tuple[int, int, i
         doc.close()
 
 
-def run_edit(edit: dict) -> dict:
+def _edit_slug(edit: dict, edit_index: int) -> str:
+    """Unique per-edit slug used for output pdf + crop filenames."""
+    stem = Path(edit["sample"]).stem
+    return f"{stem}_p{edit['page']}_e{edit_index}"
+
+
+def _save_edit_crops(
+    edit: dict, edit_index: int, out_pdf: Path, crops_dir: Path, pad_pt: float = 24.0, dpi: int = 300
+) -> dict:
+    """Render high-DPI crops of the edit bbox on both the original and the
+    edited PDF and save them side by side under crops_dir. Returns the paths.
+
+    This is the eyeball-evaluation step. SSIM + readback alone missed the
+    Arabic glyph-order corruption; visual crops make it undeniable.
+    """
+    src_path = ROOT / "datasets" / "samples" / edit["sample"]
+    slug = _edit_slug(edit, edit_index)
+    x0, y0, x1, y1 = edit["bbox"]
+    clip = fitz.Rect(x0 - pad_pt, y0 - pad_pt, x1 + pad_pt, y1 + pad_pt)
+
+    paths: dict = {}
+    for label, pdf_path in [("orig", src_path), ("edited", out_pdf)]:
+        d = fitz.open(pdf_path)
+        try:
+            pix = d[edit["page"]].get_pixmap(clip=clip, dpi=dpi)
+            dest = crops_dir / f"{slug}_{label}.png"
+            pix.save(dest)
+            paths[label] = str(dest.relative_to(ROOT))
+        finally:
+            d.close()
+    return paths
+
+
+def run_edit(edit: dict, edit_index: int, crops_dir: Path) -> dict:
     sample_path = ROOT / "datasets" / "samples" / edit["sample"]
     if not sample_path.exists():
         return {"sample": edit["sample"], "status": "missing"}
 
-    out_pdf = TMP_DIR / f"{sample_path.stem}_e2.pdf"
+    slug = _edit_slug(edit, edit_index)
+    out_pdf = TMP_DIR / f"{slug}.pdf"
 
     t0 = time.perf_counter()
     trace = apply_overlay(
@@ -283,11 +317,17 @@ def run_edit(edit: dict) -> dict:
     else:
         masked_only = {"dpi": DEFAULT_DPI}
 
+    # eyeball evaluation: save high-DPI crops of orig + edited at the edit site
+    crops = _save_edit_crops(edit, edit_index, out_pdf, crops_dir)
+
     return {
         "sample": edit["sample"],
         "status": "ok",
+        "edit_index": edit_index,
         "edit": edit,
         "trace": trace,
+        "output_pdf": str(out_pdf.relative_to(ROOT)),
+        "crops": crops,
         "overlay_seconds": round(t_overlay, 3),
         "fidelity_seconds": round(t_fid, 3),
         "fidelity_masked_edited_only": masked_only,
@@ -299,9 +339,15 @@ def run_edit(edit: dict) -> dict:
 def main() -> int:
     started_at = datetime.now(timezone.utc)
     manifest = json.loads(MANIFEST.read_text())
-    results = [run_edit(e) for e in manifest["edits"]]
+    crops_dir = OUT_DIR / "e2-crops"
+    crops_dir.mkdir(parents=True, exist_ok=True)
+    results = [run_edit(e, i, crops_dir) for i, e in enumerate(manifest["edits"])]
 
-    # kill criterion: masked SSIM on edited page < 0.99
+    # kill criteria:
+    #   (a) masked SSIM on edited page < 0.99 on ALL edits
+    #   (b) OR any single edit failed text integrity (readback != new_text)
+    # (b) is load-bearing: SSIM can stay high on a glyph-level corruption
+    # because the edit is small relative to the masked non-edit region.
     masked_ssims = [
         r["fidelity_masked_edited_only"]["aggregates"]["ssim_mean"]
         for r in results
@@ -309,7 +355,23 @@ def main() -> int:
         and r.get("fidelity_masked_edited_only", {}).get("aggregates", {}).get("ssim_mean")
         is not None
     ]
-    kill = all(m is not None and m < 0.99 for m in masked_ssims) and len(masked_ssims) > 0
+    ssim_kill = (
+        all(m is not None and m < 0.99 for m in masked_ssims)
+        and len(masked_ssims) > 0
+    )
+
+    def _readback_ok(r: dict) -> bool:
+        rb = (r.get("trace", {}).get("readback") or "").strip()
+        return rb == r.get("edit", {}).get("new_text", "").strip()
+
+    text_integrity = {
+        r.get("edit_index"): _readback_ok(r)
+        for r in results
+        if r.get("status") == "ok"
+    }
+    any_text_broken = any(not ok for ok in text_integrity.values())
+
+    kill = ssim_kill or any_text_broken
 
     env = {
         "python": sys.version.split()[0],
@@ -322,8 +384,14 @@ def main() -> int:
         "started_at": started_at.isoformat(),
         "environment": env,
         "samples_root": "datasets/samples",
-        "kill_criterion": "masked_ssim on edited page < 0.99",
+        "kill_criterion": (
+            "masked_ssim < 0.99 on all edits, "
+            "OR any edit fails readback == new_text integrity"
+        ),
         "killed": kill,
+        "killed_by_ssim": ssim_kill,
+        "killed_by_text_integrity": any_text_broken,
+        "text_integrity_by_edit_index": text_integrity,
         "results": results,
     }
 
@@ -342,13 +410,17 @@ def main() -> int:
         ma = r["fidelity_masked_edited_only"]["aggregates"]
         ca = r["fidelity_combined"]["aggregates"]
         tr = r["trace"]
+        e = r["edit"]
         print(
-            f"  {r['sample']} p{r['edit']['page']}: "
+            f"  [{r['edit_index']}] {r['sample']} p{e['page']} "
+            f"{e['original_text']!r} -> {e['new_text']!r}: "
             f"masked_ssim={ma.get('ssim_mean'):.4f} masked_mae={ma.get('mae_mean'):.2f} | "
             f"combined_ssim={ca.get('ssim_mean'):.4f} | "
-            f"font_registered={tr['font_registered']} insert_ok={tr['insert_ok']} | "
+            f"insert_ok={tr['insert_ok']} font_reg={tr['font_registered']} | "
             f"readback={tr.get('readback')!r}"
         )
+        for label, path in r["crops"].items():
+            print(f"       crop {label}: {path}")
     print(f"killed={kill}")
     return 0
 
