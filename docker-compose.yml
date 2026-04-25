@@ -1,0 +1,16 @@
+services:
+  lab:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dynamic-editing-lab
+    ports:
+      - "${LAB_PORT:-8201}:8201"
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /app
+    volumes:
+      - ./datasets:/app/datasets:ro
+      - ./benchmarks/results:/app/benchmarks/results
+    restart: unless-stopped

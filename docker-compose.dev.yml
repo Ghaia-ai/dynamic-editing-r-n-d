@@ -1,0 +1,32 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app
+    container_name: dynamic-editing-api-dev
+    command: ["uvicorn", "benchmarks.lab.main:app", "--host", "0.0.0.0", "--port", "8201", "--reload", "--reload-dir", "/app/benchmarks/lab"]
+    ports:
+      - "${LAB_API_PORT:-8201}:8201"
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /app
+    volumes:
+      - ./benchmarks/lab:/app/benchmarks/lab
+      - ./datasets:/app/datasets:ro
+      - ./benchmarks/results:/app/benchmarks/results
+
+  ui:
+    image: node:22-bookworm-slim
+    container_name: dynamic-editing-ui-dev
+    working_dir: /app
+    command: ["sh", "-c", "if [ ! -d node_modules ]; then npm install; fi && npm run dev -- --host 0.0.0.0"]
+    ports:
+      - "${LAB_UI_PORT:-5173}:5173"
+    volumes:
+      - ./benchmarks/lab/ui:/app
+    environment:
+      VITE_API_BASE: http://localhost:${LAB_API_PORT:-8201}
+    depends_on:
+      - api
