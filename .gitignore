@@ -22,8 +22,11 @@ build/
 # benchmark artifacts: commit the result JSONs, ignore heavy renders + scratch
 benchmarks/**/.tmp/
 benchmarks/**/.venv/
+benchmarks/results/.sessions/
 benchmarks/results/*.png
+benchmarks/results/**/*.png
 benchmarks/results/*.pdf
+benchmarks/results/**/*.pdf
 
 # research raw assets can be large; commit only curated subsets
 research/raw/**/*.zip
