@@ -30,6 +30,18 @@ export function sessionPdfUrl(sessionId: string): string {
   return `/api/sessions/${sessionId}/pdf`
 }
 
+function bboxQuery(bbox: [number, number, number, number], pad = 18, dpi = 300): string {
+  return `x0=${bbox[0]}&y0=${bbox[1]}&x1=${bbox[2]}&y1=${bbox[3]}&pad=${pad}&dpi=${dpi}`
+}
+
+export function sampleCropUrl(name: string, page: number, bbox: [number, number, number, number]): string {
+  return `/api/samples/${encodeURIComponent(name)}/crop/${page}.png?${bboxQuery(bbox)}`
+}
+
+export function sessionCropUrl(sessionId: string, page: number, bbox: [number, number, number, number]): string {
+  return `/api/sessions/${sessionId}/crop/${page}.png?${bboxQuery(bbox)}`
+}
+
 export function detect(sample: string): Promise<DetectResponse> {
   return jsonFetch('/api/detect', {
     method: 'POST',

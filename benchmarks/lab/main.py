@@ -141,6 +141,28 @@ def _render_page_png(pdf_bytes: bytes, page_index: int, dpi: int) -> bytes:
         doc.close()
 
 
+def _render_crop_png(
+    pdf_bytes: bytes,
+    page_index: int,
+    bbox: tuple[float, float, float, float],
+    pad: float,
+    dpi: int,
+) -> bytes:
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    try:
+        if page_index < 0 or page_index >= len(doc):
+            raise HTTPException(status_code=404, detail="page out of range")
+        page = doc[page_index]
+        x0, y0, x1, y1 = bbox
+        rect = fitz.Rect(x0 - pad, y0 - pad, x1 + pad, y1 + pad)
+        rect = rect & page.rect
+        scale = dpi / 72.0
+        pix = page.get_pixmap(matrix=fitz.Matrix(scale, scale), clip=rect)
+        return pix.tobytes("png")
+    finally:
+        doc.close()
+
+
 def _page_sizes(pdf_bytes: bytes) -> list[tuple[float, float]]:
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     try:
@@ -271,6 +293,38 @@ def get_session_pdf(session_id: str):
 def render_session_page(session_id: str, page: int, dpi: int = 150):
     path = _resolve_session_pdf(session_id)
     png = _render_page_png(path.read_bytes(), page, dpi)
+    return Response(content=png, media_type="image/png")
+
+
+@app.get("/api/samples/{name}/crop/{page}.png")
+def render_sample_crop(
+    name: str,
+    page: int,
+    x0: float,
+    y0: float,
+    x1: float,
+    y1: float,
+    pad: float = 18.0,
+    dpi: int = 300,
+):
+    path = _resolve_sample(name)
+    png = _render_crop_png(path.read_bytes(), page, (x0, y0, x1, y1), pad, dpi)
+    return Response(content=png, media_type="image/png")
+
+
+@app.get("/api/sessions/{session_id}/crop/{page}.png")
+def render_session_crop(
+    session_id: str,
+    page: int,
+    x0: float,
+    y0: float,
+    x1: float,
+    y1: float,
+    pad: float = 18.0,
+    dpi: int = 300,
+):
+    path = _resolve_session_pdf(session_id)
+    png = _render_crop_png(path.read_bytes(), page, (x0, y0, x1, y1), pad, dpi)
     return Response(content=png, media_type="image/png")
 
 

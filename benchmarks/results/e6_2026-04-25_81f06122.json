@@ -1,0 +1,521 @@
+{
+  "experiment": "e6-lab",
+  "started_at": "2026-04-25T17:13:12.892228+00:00",
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.10.14-linuxkit-aarch64-with-glibc2.41",
+    "pymupdf": "Python",
+    "cold_run": true
+  },
+  "samples_root": "datasets/samples",
+  "fidelity": "non-edited regions: ssim mean per page after masking edit bboxes (+3pt pad)",
+  "results": [
+    {
+      "sample": "qms_psa_121_feb_2024_poster.pdf",
+      "edit_count": 4,
+      "edits": [
+        {
+          "original_text": "135,238",
+          "new_text": "150,000",
+          "page": 0,
+          "bbox": [
+            551.37890625,
+            56.93861770629883,
+            594.8614501953125,
+            77.0846176147461
+          ],
+          "font": "Lusail-Bold",
+          "fontsize": 14.0,
+          "color_01": [
+            0.8784313725490196,
+            0.5294117647058824,
+            0.10196078431372549
+          ],
+          "kind": "numeric",
+          "found": true
+        },
+        {
+          "original_text": "359",
+          "new_text": "999",
+          "page": 0,
+          "bbox": [
+            507.2427062988281,
+            603.9653930664062,
+            528.4246826171875,
+            624.1113891601562
+          ],
+          "font": "Lusail-Bold",
+          "fontsize": 14.0,
+          "color_01": [
+            0.8784313725490196,
+            0.5294117647058824,
+            0.10196078431372549
+          ],
+          "kind": "numeric",
+          "found": true
+        },
+        {
+          "original_text": "71%",
+          "new_text": "88%",
+          "page": 0,
+          "bbox": [
+            566.2843627929688,
+            392.7344055175781,
+            584.0443115234375,
+            410.0024108886719
+          ],
+          "font": "Lusail-Bold",
+          "fontsize": 12.0,
+          "color_01": [
+            0.27058823529411763,
+            0.33725490196078434,
+            0.39215686274509803
+          ],
+          "kind": "percent",
+          "found": true
+        },
+        {
+          "original_text": "2,297,236",
+          "new_text": "2,500,000",
+          "page": 0,
+          "bbox": [
+            175.12109375,
+            481.2516174316406,
+            228.65708923339844,
+            501.3976135253906
+          ],
+          "font": "Lusail-Bold",
+          "fontsize": 14.0,
+          "color_01": [
+            0.8784313725490196,
+            0.5294117647058824,
+            0.10196078431372549
+          ],
+          "kind": "numeric",
+          "found": true
+        }
+      ],
+      "edit_seconds": 0.258,
+      "edit_results": [
+        {
+          "page": 0,
+          "original_text": "135,238",
+          "new_text": "150,000",
+          "ok": true,
+          "replacements": 1,
+          "error": null,
+          "trace": {
+            "inst_bbox": [
+              551.37890625,
+              56.93861770629883,
+              594.8614501953125,
+              77.0846176147461
+            ],
+            "cover_rect": [
+              551.37890625,
+              58.95321769714356,
+              594.8614501953125,
+              73.05541763305663
+            ],
+            "bg_color_01": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "text_color_01": [
+              0.8784313725490196,
+              0.5294117647058824,
+              0.10196078431372549
+            ],
+            "fontsize": 14.0,
+            "font_alias": "LusailBold",
+            "embedded_font_used": "Lusail-Bold",
+            "n_search_instances": 1
+          }
+        },
+        {
+          "page": 0,
+          "original_text": "359",
+          "new_text": "999",
+          "ok": true,
+          "replacements": 1,
+          "error": null,
+          "trace": {
+            "inst_bbox": [
+              507.2427062988281,
+              603.9653930664062,
+              528.4246826171875,
+              624.1113891601562
+            ],
+            "cover_rect": [
+              507.2427062988281,
+              605.9799926757812,
+              528.4246826171875,
+              620.0821899414062
+            ],
+            "bg_color_01": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "text_color_01": [
+              0.8784313725490196,
+              0.5294117647058824,
+              0.10196078431372549
+            ],
+            "fontsize": 14.0,
+            "font_alias": "LusailBold",
+            "embedded_font_used": "Lusail-Bold",
+            "n_search_instances": 1
+          }
+        },
+        {
+          "page": 0,
+          "original_text": "71%",
+          "new_text": "88%",
+          "ok": true,
+          "replacements": 1,
+          "error": null,
+          "trace": {
+            "inst_bbox": [
+              566.2843627929688,
+              392.7344055175781,
+              584.0443115234375,
+              410.0024108886719
+            ],
+            "cover_rect": [
+              566.2843627929688,
+              394.4612060546875,
+              584.0443115234375,
+              406.54880981445314
+            ],
+            "bg_color_01": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "text_color_01": [
+              0.27058823529411763,
+              0.33725490196078434,
+              0.39215686274509803
+            ],
+            "fontsize": 12.0,
+            "font_alias": "LusailBold",
+            "embedded_font_used": "Lusail-Bold",
+            "n_search_instances": 2
+          }
+        },
+        {
+          "page": 0,
+          "original_text": "2,297,236",
+          "new_text": "2,500,000",
+          "ok": true,
+          "replacements": 1,
+          "error": null,
+          "trace": {
+            "inst_bbox": [
+              175.12109375,
+              481.2516174316406,
+              228.65708923339844,
+              501.3976135253906
+            ],
+            "cover_rect": [
+              175.12109375,
+              483.26621704101564,
+              228.65708923339844,
+              497.3684143066406
+            ],
+            "bg_color_01": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "text_color_01": [
+              0.8784313725490196,
+              0.5294117647058824,
+              0.10196078431372549
+            ],
+            "fontsize": 14.0,
+            "font_alias": "LusailBold",
+            "embedded_font_used": "Lusail-Bold",
+            "n_search_instances": 1
+          }
+        }
+      ],
+      "fidelity_combined": {
+        "dpi": 150,
+        "metric_version": "1.0",
+        "pages": [
+          {
+            "page_index": 0,
+            "dpi": 150,
+            "ssim": 0.9980034431276875,
+            "mae": 0.10552930106872307,
+            "status": "ok"
+          },
+          {
+            "page_index": 1,
+            "dpi": 150,
+            "ssim": 1.0,
+            "mae": 0.0,
+            "status": "ok"
+          }
+        ],
+        "aggregates": {
+          "ssim_mean": 0.9990017215638438,
+          "mae_mean": 0.05276465053436154,
+          "n_pages_ok": 2,
+          "n_pages_total": 2
+        },
+        "fidelity_seconds": 3.138
+      },
+      "fidelity_masked_edited_only_per_page": [
+        {
+          "page_index": 0,
+          "fidelity_seconds": 2.841,
+          "n_edits_on_page": 4,
+          "dpi": 150,
+          "ssim": 0.9999663563485468,
+          "mae": 0.002202315691844151,
+          "status": "ok"
+        }
+      ]
+    },
+    {
+      "sample": "water_infographics_en_filled.pdf",
+      "edit_count": 3,
+      "edits": [
+        {
+          "original_text": "669",
+          "new_text": "700",
+          "page": 1,
+          "bbox": [
+            407.5278015136719,
+            684.5657348632812,
+            451.7073059082031,
+            724.3554077148438
+          ],
+          "font": "Lusail-Bd",
+          "fontsize": 28.139799118041992,
+          "color_01": [
+            0.027450980392156862,
+            0.7019607843137254,
+            0.9176470588235294
+          ],
+          "kind": "numeric",
+          "found": true
+        },
+        {
+          "original_text": "145.5",
+          "new_text": "200.0",
+          "page": 1,
+          "bbox": [
+            132.67970275878906,
+            217.78549194335938,
+            191.85769653320312,
+            257.5751647949219
+          ],
+          "font": "Lusail-Bd",
+          "fontsize": 28.139799118041992,
+          "color_01": [
+            0.027450980392156862,
+            0.7019607843137254,
+            0.9176470588235294
+          ],
+          "kind": "numeric",
+          "found": true
+        },
+        {
+          "original_text": "87.4",
+          "new_text": "92.0",
+          "page": 1,
+          "bbox": [
+            396.837890625,
+            217.78549194335938,
+            443.2122802734375,
+            257.5751647949219
+          ],
+          "font": "Lusail-Bd",
+          "fontsize": 28.139799118041992,
+          "color_01": [
+            0.027450980392156862,
+            0.7019607843137254,
+            0.9176470588235294
+          ],
+          "kind": "numeric",
+          "found": true
+        }
+      ],
+      "edit_seconds": 0.029,
+      "edit_results": [
+        {
+          "page": 1,
+          "original_text": "669",
+          "new_text": "700",
+          "ok": true,
+          "replacements": 1,
+          "error": null,
+          "trace": {
+            "inst_bbox": [
+              407.5278015136719,
+              684.5657348632812,
+              451.7073059082031,
+              724.3554077148438
+            ],
+            "cover_rect": [
+              407.5278015136719,
+              688.5447021484375,
+              451.7073059082031,
+              716.3974731445312
+            ],
+            "bg_color_01": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "text_color_01": [
+              0.027450980392156862,
+              0.7019607843137254,
+              0.9176470588235294
+            ],
+            "fontsize": 28.139799118041992,
+            "font_alias": "LusailBd",
+            "embedded_font_used": "Lusail-Bd",
+            "n_search_instances": 2
+          }
+        },
+        {
+          "page": 1,
+          "original_text": "145.5",
+          "new_text": "200.0",
+          "ok": true,
+          "replacements": 1,
+          "error": null,
+          "trace": {
+            "inst_bbox": [
+              132.67970275878906,
+              217.78549194335938,
+              191.85769653320312,
+              257.5751647949219
+            ],
+            "cover_rect": [
+              132.67970275878906,
+              221.76445922851562,
+              191.85769653320312,
+              249.6172302246094
+            ],
+            "bg_color_01": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "text_color_01": [
+              0.027450980392156862,
+              0.7019607843137254,
+              0.9176470588235294
+            ],
+            "fontsize": 28.139799118041992,
+            "font_alias": "LusailBd",
+            "embedded_font_used": "Lusail-Bd",
+            "n_search_instances": 1
+          }
+        },
+        {
+          "page": 1,
+          "original_text": "87.4",
+          "new_text": "92.0",
+          "ok": true,
+          "replacements": 1,
+          "error": null,
+          "trace": {
+            "inst_bbox": [
+              396.837890625,
+              217.78549194335938,
+              443.2122802734375,
+              257.5751647949219
+            ],
+            "cover_rect": [
+              396.837890625,
+              221.76445922851562,
+              443.2122802734375,
+              249.6172302246094
+            ],
+            "bg_color_01": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "text_color_01": [
+              0.027450980392156862,
+              0.7019607843137254,
+              0.9176470588235294
+            ],
+            "fontsize": 28.139799118041992,
+            "font_alias": "LusailBd",
+            "embedded_font_used": "Lusail-Bd",
+            "n_search_instances": 1
+          }
+        }
+      ],
+      "fidelity_combined": {
+        "dpi": 150,
+        "metric_version": "1.0",
+        "pages": [
+          {
+            "page_index": 0,
+            "dpi": 150,
+            "ssim": 1.0,
+            "mae": 0.0,
+            "status": "ok"
+          },
+          {
+            "page_index": 1,
+            "dpi": 150,
+            "ssim": 0.9936037874657675,
+            "mae": 0.4047340777581866,
+            "status": "ok"
+          },
+          {
+            "page_index": 2,
+            "dpi": 150,
+            "ssim": 1.0,
+            "mae": 0.0,
+            "status": "ok"
+          },
+          {
+            "page_index": 3,
+            "dpi": 150,
+            "ssim": 1.0,
+            "mae": 0.0,
+            "status": "ok"
+          },
+          {
+            "page_index": 4,
+            "dpi": 150,
+            "ssim": 1.0,
+            "mae": 0.0,
+            "status": "ok"
+          }
+        ],
+        "aggregates": {
+          "ssim_mean": 0.9987207574931535,
+          "mae_mean": 0.08094681555163732,
+          "n_pages_ok": 5,
+          "n_pages_total": 5
+        },
+        "fidelity_seconds": 1.634
+      },
+      "fidelity_masked_edited_only_per_page": [
+        {
+          "page_index": 1,
+          "fidelity_seconds": 1.919,
+          "n_edits_on_page": 3,
+          "dpi": 150,
+          "ssim": 0.9998551811154281,
+          "mae": 0.0128253994913197,
+          "status": "ok"
+        }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -8,6 +8,7 @@ type Props = {
   highlightBboxes?: { page: number; bbox: [number, number, number, number]; color?: string }[]
   pageSizesPt?: [number, number][]
   label?: string
+  initialPage?: number
 }
 
 export default function PdfPreview({
@@ -16,8 +17,12 @@ export default function PdfPreview({
   highlightBboxes = [],
   pageSizesPt,
   label,
+  initialPage = 0,
 }: Props) {
-  const [page, setPage] = useState(0)
+  const [page, setPage] = useState(initialPage)
+  useEffect(() => {
+    setPage(Math.max(0, Math.min(pageCount - 1, initialPage)))
+  }, [initialPage, pageCount])
 
   if (pageCount <= 0) {
     return <div className="text-sm text-zinc-500">No pages.</div>

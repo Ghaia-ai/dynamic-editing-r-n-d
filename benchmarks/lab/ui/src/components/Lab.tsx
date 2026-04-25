@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Wand2, Download, RotateCw, Loader2 } from 'lucide-react'
+import { Wand2, Download, RotateCw, Loader2, Info, AlertCircle } from 'lucide-react'
 import {
   apply,
   detect,
@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 import SamplePicker from './SamplePicker'
 import PdfPreview from './PdfPreview'
 import FieldsTable from './FieldsTable'
+import ChangesPanel from './ChangesPanel'
 
 type RunState = 'idle' | 'detecting' | 'ready' | 'applying' | 'done' | 'error'
 
@@ -25,6 +26,7 @@ export default function Lab() {
   const [applyResp, setApplyResp] = useState<ApplyResponse | null>(null)
   const [state, setState] = useState<RunState>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [previewPage, setPreviewPage] = useState(0)
 
   useEffect(() => {
     listSamples()
@@ -42,6 +44,7 @@ export default function Lab() {
     setApplyResp(null)
     setValues({})
     setError(null)
+    setPreviewPage(0)
     detect(selected)
       .then((d) => {
         setDetectResp(d)
@@ -75,6 +78,9 @@ export default function Lab() {
       .map((s) => ({ page: s.page, bbox: s.bbox }))
   }, [detectResp, values])
 
+  // True when user typed new edits after the last successful generate.
+  const editedIsStale = applyResp !== null && dirtyEdits.length > 0
+
   const onApply = async () => {
     if (!selected || dirtyEdits.length === 0) return
     setState('applying')
@@ -82,6 +88,8 @@ export default function Lab() {
     try {
       const r = await apply(selected, dirtyEdits)
       setApplyResp(r)
+      // jump preview to the first changed page
+      if (dirtyEdits[0]) setPreviewPage(dirtyEdits[0].page)
       setState('done')
     } catch (e) {
       setError(String(e))
@@ -93,19 +101,30 @@ export default function Lab() {
     setValues({})
     setApplyResp(null)
     setState(detectResp ? 'ready' : 'idle')
+    setPreviewPage(0)
   }
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
       <header className="border-b border-zinc-900 bg-zinc-950/80 backdrop-blur sticky top-0 z-10">
-        <div className="px-6 py-4 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">Dynamic PDF Editing Lab</h1>
-            <p className="text-xs text-zinc-500">
-              Approach C (overlay) · phase-3 demo · backed by the npc-pr-agent overlay engine
+        <div className="px-6 py-4 flex items-start justify-between gap-6">
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <h1 className="text-lg font-semibold tracking-tight">Dynamic PDF Editing Lab</h1>
+              <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                Method: Overlay (Approach C)
+              </span>
+            </div>
+            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed max-w-3xl">
+              Testing whether arbitrary uploaded posters can be edited surgically: detect numeric values, cover them with a colour-matched rectangle, and draw the new value at the same bbox in the same font. Other approaches (B: HTML roundtrip, D: layout-AI) live in the report — only Approach&nbsp;C is wired into the lab.
             </p>
+            <ol className="flex items-center gap-2 text-xs mt-3">
+              <Step n={1} label="Pick a sample" active={selected !== null} />
+              <Step n={2} label={`Type new values (${dirtyEdits.length} pending)`} active={dirtyEdits.length > 0} />
+              <Step n={3} label="Generate & compare" active={applyResp !== null} />
+            </ol>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={onReset}
               disabled={state === 'detecting' || state === 'applying'}
@@ -135,7 +154,7 @@ export default function Lab() {
                 href={sessionPdfUrl(applyResp.session_id)}
                 className="flex items-center gap-2 px-3 py-2 rounded-md border border-amber-500/40 text-amber-200 text-sm hover:bg-amber-500/10"
               >
-                <Download className="size-4" /> download
+                <Download className="size-4" /> edited PDF
               </a>
             )}
           </div>
@@ -145,33 +164,47 @@ export default function Lab() {
         </div>
       </header>
 
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 min-h-0">
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-4 p-4 min-h-0">
         <section className="flex flex-col gap-3 min-h-0">
           <AnimatePresence mode="wait">
-            {applyResp ? (
+            {applyResp && detectResp && selected ? (
               <motion.div
-                key="edited"
+                key="comparing"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="flex flex-col gap-3 h-full min-h-0"
+                className="flex flex-col gap-3 min-h-0"
               >
-                <div className="grid grid-cols-2 gap-4 h-full min-h-0">
-                  {detectResp && (
-                    <PdfPreview
-                      label="Original"
-                      pageCount={detectResp.page_count}
-                      pngUrlForPage={(p) => samplePagePngUrl(selected!, p)}
-                      pageSizesPt={detectResp.page_sizes}
-                      highlightBboxes={dirtyHighlights}
-                    />
-                  )}
+                <div className="grid grid-cols-2 gap-4">
                   <PdfPreview
-                    label="Edited"
-                    pageCount={applyResp.page_count}
-                    pngUrlForPage={(p) => sessionPagePngUrl(applyResp.session_id, p)}
+                    label="Original"
+                    pageCount={detectResp.page_count}
+                    pngUrlForPage={(p) => samplePagePngUrl(selected, p)}
+                    pageSizesPt={detectResp.page_sizes}
+                    highlightBboxes={dirtyHighlights}
+                    initialPage={previewPage}
                   />
+                  <div className="relative">
+                    <PdfPreview
+                      label="Edited"
+                      pageCount={applyResp.page_count}
+                      pngUrlForPage={(p) => sessionPagePngUrl(applyResp.session_id, p)}
+                      initialPage={previewPage}
+                    />
+                    {editedIsStale && (
+                      <div className="absolute inset-0 bg-zinc-950/70 rounded-lg flex items-center justify-center pointer-events-none">
+                        <div className="text-amber-300 text-xs flex items-center gap-2 px-3 py-1.5 rounded-md bg-zinc-950/90 border border-amber-500/40">
+                          <AlertCircle className="size-3" />
+                          stale — click generate to apply your new edits
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
+                <ChangesPanel
+                  sample={selected}
+                  sessionId={applyResp.session_id}
+                  results={applyResp.results}
+                />
               </motion.div>
             ) : (
               detectResp &&
@@ -182,12 +215,23 @@ export default function Lab() {
                   animate={{ opacity: 1 }}
                   className="h-full min-h-0"
                 >
+                  {dirtyEdits.length === 0 && (
+                    <div className="mb-3 flex items-start gap-2 text-xs text-zinc-400 rounded-md border border-zinc-800 bg-zinc-900 p-3">
+                      <Info className="size-4 shrink-0 mt-0.5 text-zinc-500" />
+                      <div>
+                        <span className="text-zinc-200">Type a number into the table on the right.</span>{' '}
+                        Edited fields will get an amber tint and a highlight here on the preview, then click{' '}
+                        <span className="text-amber-300">generate</span> to overlay them onto the PDF.
+                      </div>
+                    </div>
+                  )}
                   <PdfPreview
                     label="Original"
                     pageCount={detectResp.page_count}
                     pngUrlForPage={(p) => samplePagePngUrl(selected, p)}
                     pageSizesPt={detectResp.page_sizes}
                     highlightBboxes={dirtyHighlights}
+                    initialPage={previewPage}
                   />
                 </motion.div>
               )
@@ -214,19 +258,31 @@ export default function Lab() {
               onChange={(id, v) => setValues((prev) => ({ ...prev, [id]: v }))}
             />
           )}
-          {applyResp && (
-            <div className="text-xs rounded border border-zinc-800 bg-zinc-900 p-3 max-h-40 overflow-auto">
-              <div className="text-zinc-500 mb-1">apply result</div>
-              {applyResp.results.map((r, i) => (
-                <div key={i} className={cn('font-mono', r.ok ? 'text-emerald-300' : 'text-red-400')}>
-                  {r.ok ? '✓' : '✗'} p{r.page + 1} {r.original_text} → {r.new_text}
-                  {r.error ? ` — ${r.error}` : ''}
-                </div>
-              ))}
-            </div>
-          )}
         </section>
       </main>
     </div>
+  )
+}
+
+function Step({ n, label, active }: { n: number; label: string; active: boolean }) {
+  return (
+    <li
+      className={cn(
+        'flex items-center gap-1.5 px-2 py-1 rounded-full border',
+        active
+          ? 'border-amber-500/40 bg-amber-500/10 text-amber-200'
+          : 'border-zinc-800 bg-zinc-900 text-zinc-500',
+      )}
+    >
+      <span
+        className={cn(
+          'inline-flex items-center justify-center size-4 rounded-full text-[10px] font-mono',
+          active ? 'bg-amber-500 text-zinc-950' : 'bg-zinc-800 text-zinc-400',
+        )}
+      >
+        {n}
+      </span>
+      <span>{label}</span>
+    </li>
   )
 }
