@@ -15,8 +15,13 @@ import { cn } from '@/lib/utils'
 type Approach = {
   id: string
   name: string
-  status: 'killed' | 'not-started' | 'chosen' | string
+  status: 'killed' | 'not-started' | 'chosen' | 'baseline-to-beat' | string
   verdict: string
+}
+
+type RuledOut = {
+  name: string
+  why: string
 }
 
 type Experiment = {
@@ -41,6 +46,7 @@ type Metric = {
 
 type FindingsResponse = {
   approaches: Approach[]
+  ruled_out: RuledOut[]
   experiments: Experiment[]
   open_questions: OpenQuestion[]
   latest_e6: {
@@ -49,7 +55,7 @@ type FindingsResponse = {
     metrics: Metric[]
   } | null
   results_files: { file: string; experiment_id: string | null }[]
-  report: { available: boolean; url: string }
+  report: { available: boolean; url: string; version: string | null }
 }
 
 const STATUS_BADGES: Record<string, { label: string; className: string; Icon: typeof CheckCircle2 }> = {
@@ -82,6 +88,11 @@ const STATUS_BADGES: Record<string, { label: string; className: string; Icon: ty
     label: 'not started',
     className: 'border-zinc-700 bg-zinc-900 text-zinc-400',
     Icon: CircleDashed,
+  },
+  'baseline-to-beat': {
+    label: 'baseline-to-beat',
+    className: 'border-blue-500/40 bg-blue-500/10 text-blue-300',
+    Icon: Sparkles,
   },
 }
 
@@ -149,9 +160,14 @@ export default function Findings() {
       <BottomLine metrics={data.latest_e6?.metrics ?? []} />
 
       <section>
-        <h2 className="text-xs uppercase tracking-wider text-zinc-500 mb-3">
-          Approaches we evaluated
-        </h2>
+        <div className="flex items-baseline justify-between mb-3">
+          <h2 className="text-xs uppercase tracking-wider text-zinc-500">
+            Approaches we evaluated
+          </h2>
+          <span className="text-[10px] text-zinc-500">
+            A-D from initial brief · E-F from industry survey
+          </span>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {data.approaches.map((a) => (
             <div
@@ -163,20 +179,49 @@ export default function Findings() {
                   : 'border-zinc-800 bg-zinc-900',
               )}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-mono text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 shrink-0">
                     {a.id}
                   </span>
-                  <span className="font-medium text-sm">{a.name}</span>
+                  <span className="font-medium text-sm truncate">{a.name}</span>
                 </div>
-                <StatusBadge status={a.status} />
+                <div className="shrink-0">
+                  <StatusBadge status={a.status} />
+                </div>
               </div>
               <p className="text-xs text-zinc-400 leading-relaxed">{a.verdict}</p>
             </div>
           ))}
         </div>
       </section>
+
+      {data.ruled_out && data.ruled_out.length > 0 && (
+        <section>
+          <h2 className="text-xs uppercase tracking-wider text-zinc-500 mb-3">
+            Ruled out by industry survey
+            <span className="ml-2 text-[10px] text-zinc-600 normal-case">
+              variants of A-D or doesn't apply to flat exports
+            </span>
+          </h2>
+          <details className="rounded-lg border border-zinc-800 bg-zinc-900">
+            <summary className="cursor-pointer px-4 py-2 text-xs text-zinc-400 hover:text-zinc-200">
+              {data.ruled_out.length} approaches surveyed and ruled out — click to expand
+            </summary>
+            <div className="divide-y divide-zinc-800">
+              {data.ruled_out.map((r, i) => (
+                <div key={i} className="px-4 py-3">
+                  <div className="text-sm font-medium text-zinc-300 mb-1 flex items-center gap-2">
+                    <XCircle className="size-3 text-zinc-600 shrink-0" />
+                    {r.name}
+                  </div>
+                  <p className="text-xs text-zinc-500 leading-relaxed pl-5">{r.why}</p>
+                </div>
+              ))}
+            </div>
+          </details>
+        </section>
+      )}
 
       <section>
         <h2 className="text-xs uppercase tracking-wider text-zinc-500 mb-3">

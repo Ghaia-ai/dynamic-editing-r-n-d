@@ -56,7 +56,7 @@ APPROACHES = [
         "id": "A",
         "name": "Extract → auto-PDFFieldDefinition → existing editor",
         "status": "killed",
-        "verdict": "E1: extractors fragmented spans on Illustrator-exported PDFs; round-trip SSIM < 0.9. Useful as a *detector* for the overlay path, not a standalone solver.",
+        "verdict": "E1: extractors fragmented spans on Illustrator-exported PDFs; round-trip SSIM < 0.9. Useful as a detector for the overlay path, not a standalone solver.",
     },
     {
         "id": "B",
@@ -68,13 +68,60 @@ APPROACHES = [
         "id": "C",
         "name": "Overlay — detect span, cover, redraw at same bbox in same font",
         "status": "chosen",
-        "verdict": "Both Latin and Arabic working in the lab on both samples. Masked SSIM > 0.9998 on non-edited regions.",
+        "verdict": "Both Latin and Arabic working in the lab on both samples. Masked SSIM > 0.9998 on non-edited regions. Industry survey confirms this is the same primitive Apryse and Adobe use under the hood.",
     },
     {
         "id": "D",
         "name": "Layout-AI (Vision LLMs) as a detector",
         "status": "not-started",
         "verdict": "Useful as a primitive for fields the cheap regex extractor misses (free-form labels, photographic backgrounds).",
+    },
+    {
+        "id": "E",
+        "name": "Localized diffusion glyph inpainting (AnyText2 / TextDoctor)",
+        "status": "not-started",
+        "verdict": "Surfaced by industry survey. Only genuinely novel candidate beyond A-D. Addresses C's failure modes: gradients, fragmented Tj runs, heavily-subsetted fonts. Open as e8 spike (~2 days). Open weights, GPU inference, font-conditioned, multilingual incl. Arabic.",
+    },
+    {
+        "id": "F",
+        "name": "Commercial WYSIWYG SDKs as baseline (Apryse / Nutrient / Foxit)",
+        "status": "baseline-to-beat",
+        "verdict": "Not novel — same primitive as C, productized. Worth a 1-day Apryse WebViewer eyeball comparison on the two sample posters; not worth the ~$15-50k/yr license without measured win. Nutrient is LTR-only, dead for Arabic scope.",
+    },
+]
+
+
+# Industry approaches that the survey confirmed are dead-on-arrival or
+# variants of A-D. Surfaced in the UI so reviewers see we evaluated them
+# rather than missed them.
+RULED_OUT = [
+    {
+        "name": "Direct content-stream Tj/TJ rewrite (Foxit, iText, pikepdf)",
+        "why": "Same primitive as C minus the redact step. Breaks on subset embeds, fragmented spans, and Arabic shaping. Foxit's own docs warn the renderer breaks if new chars aren't in the embedded CIDFont.",
+    },
+    {
+        "name": "PDF → SVG → DOM-edit → PDF",
+        "why": "Inkscape forums + Wikipedia Graphics Lab confirm ligatures break and fonts substitute even when embedded. Arabic ligatures are guaranteed to fail. Strict subset of B with worse fidelity.",
+    },
+    {
+        "name": "PDF → Markdown (Marker / Nougat) → render",
+        "why": "Re-rendered Markdown does not look like the original poster. Extraction-accurate, not visually faithful. Variant of B.",
+    },
+    {
+        "name": "ABBYY FineReader reconstructive edit",
+        "why": "Full document reconstruction via OCR + layout. Output is no longer the input PDF — it's a regenerated lookalike. Destructive same as B.",
+    },
+    {
+        "name": "AcroForm / XFA fast-path",
+        "why": "Illustrator and Canva exports are flat — no /AcroForm, no /StructTreeRoot. Confirmed dead for our input distribution. (Cheap precondition check still worth adding for tagged-PDF future inputs.)",
+    },
+    {
+        "name": "Closed-API multimodal image edit (gpt-image-1.5, Gemini)",
+        "why": "Same shape as E but closed-weights, no font conditioning, and known regressions (OpenAI community thread: masked-inpaint replaces the entire image). Strictly weaker than E.",
+    },
+    {
+        "name": "Canva / Figma 'import PDF as editable layers' plugins",
+        "why": "Black-box services, no automation SLA. Useful only as a manual-fallback if workflow ever pivots to user-edits-in-Figma. Skip for backend.",
     },
 ]
 
@@ -459,28 +506,35 @@ def findings():
         m = re.match(r"^([a-z]\d+)_", p.name)
         results_files.append({"file": p.name, "experiment_id": m.group(1) if m else None})
 
+    report_pdf = REPORTS_OUT / "dynamic-editing-demo-v0.3.pdf"
+    if not report_pdf.exists():
+        report_pdf = REPORTS_OUT / "dynamic-editing-demo-v0.2.pdf"
     return {
         "approaches": APPROACHES,
+        "ruled_out": RULED_OUT,
         "experiments": EXPERIMENTS,
         "open_questions": OPEN_QUESTIONS,
         "latest_e6": latest_e6,
         "results_files": results_files,
         "report": {
-            "available": (REPORTS_OUT / "dynamic-editing-demo-v0.2.pdf").exists(),
+            "available": report_pdf.exists(),
             "url": "/api/report.pdf",
+            "version": report_pdf.stem.split("-")[-1] if report_pdf.exists() else None,
         },
     }
 
 
 @app.get("/api/report.pdf")
 def serve_report():
-    pdf = REPORTS_OUT / "dynamic-editing-demo-v0.2.pdf"
-    if not pdf.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="report not compiled. run: docker run --rm -v $PWD:/work --workdir /work ghcr.io/typst/typst:latest compile reports/src/dynamic-editing-demo-v0.2.typ reports/out/dynamic-editing-demo-v0.2.pdf",
-        )
-    return FileResponse(str(pdf), media_type="application/pdf", filename=pdf.name)
+    # Prefer the latest version; fall back to v0.2 if v0.3 hasn't been compiled.
+    for candidate in ("dynamic-editing-demo-v0.3.pdf", "dynamic-editing-demo-v0.2.pdf"):
+        pdf = REPORTS_OUT / candidate
+        if pdf.exists():
+            return FileResponse(str(pdf), media_type="application/pdf", filename=pdf.name)
+    raise HTTPException(
+        status_code=404,
+        detail="report not compiled. run: docker run --rm -v $PWD:/work --workdir /work ghcr.io/typst/typst:latest compile reports/src/dynamic-editing-demo-v0.3.typ reports/out/dynamic-editing-demo-v0.3.pdf",
+    )
 
 
 # Serve the built UI when present (prod-style container only).
