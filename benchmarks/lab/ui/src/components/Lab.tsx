@@ -105,7 +105,7 @@ export default function Lab() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
+    <div className="min-h-screen flex flex-col">
       <header className="border-b border-zinc-900 bg-zinc-950/80 backdrop-blur sticky top-0 z-10">
         <div className="px-6 py-4 flex items-start justify-between gap-6">
           <div className="flex-1">

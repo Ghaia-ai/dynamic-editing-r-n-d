@@ -7,3 +7,5 @@ scikit-image>=0.22.0
 pydantic>=2.0.0
 python-dotenv>=1.0.0
 python-multipart>=0.0.20
+arabic-reshaper>=3.0.0
+python-bidi>=0.4.2

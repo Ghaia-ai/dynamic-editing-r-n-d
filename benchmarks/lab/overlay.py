@@ -31,6 +31,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import fitz
+import pymupdf
 
 logger = logging.getLogger(__name__)
 
@@ -134,8 +135,12 @@ def extract_editable_spans(pdf_bytes: bytes) -> list[EditableSpan]:
                             kind = "percent" if text.endswith("%") else "numeric"
                             editable = True
                         elif is_arabic:
+                            # arabic editable via insert_htmlbox path (Lusail
+                            # embedded font registered via pymupdf.Archive +
+                            # contextual shaping handled by HarfBuzz inside
+                            # pymupdf). Latin path doesn't apply.
                             kind = "arabic-text"
-                            editable = False
+                            editable = True
                         else:
                             # skip pure prose so the table stays usable
                             continue
@@ -178,6 +183,10 @@ class PDFEditor:
         self._font_buffers: dict[str, bytes] = {}
         self._fitz_fonts: dict[str, fitz.Font] = {}
         self._registered_fonts: set[tuple[int, str]] = set()
+        # Arabic path uses pymupdf.Archive so insert_htmlbox can resolve
+        # @font-face urls. Built lazily; one archive per editor.
+        self._arabic_archive: pymupdf.Archive | None = None
+        self._arabic_css: str | None = None
 
     @classmethod
     def from_bytes(cls, pdf_bytes: bytes) -> "PDFEditor":
@@ -241,6 +250,152 @@ class PDFEditor:
             return True
         except Exception:
             return False
+
+    def _get_arabic_archive(self) -> tuple[pymupdf.Archive, str]:
+        """Build (once) a pymupdf Archive over every embedded font + the
+        matching @font-face CSS. insert_htmlbox uses the archive to resolve
+        url() refs and HarfBuzz shapes the arabic glyphs internally.
+        """
+        if self._arabic_archive is not None and self._arabic_css is not None:
+            return self._arabic_archive, self._arabic_css
+        self._extract_fonts()
+        arch = pymupdf.Archive()
+        css_parts: list[str] = [
+            "* { margin: 0; padding: 0; }",
+            ".cell { white-space: nowrap; overflow: visible; line-height: 1; }",
+        ]
+        for name, buf in self._font_buffers.items():
+            file_alias = f"{name.replace(' ', '_')}.ttf"
+            arch.add(buf, file_alias)
+            family = name.split("-")[0]  # "Lusail-Bold" -> "Lusail"
+            weight = "700" if "Bold" in name or name.endswith("-Bd") else (
+                "300" if "Light" in name else "400"
+            )
+            css_parts.append(
+                f'@font-face {{ font-family: "{family}"; font-weight: {weight}; '
+                f'src: url("{file_alias}"); }}'
+            )
+        css = "\n".join(css_parts)
+        self._arabic_archive = arch
+        self._arabic_css = css
+        return arch, css
+
+    def _replace_arabic(
+        self,
+        edit: "EditRequest",
+        page,
+        page_idx: int,
+        inst: fitz.Rect,
+        all_spans: list[dict],
+    ) -> "EditResult":
+        """Arabic path: cover + insert_htmlbox + Lusail font Archive.
+
+        insert_text doesn't shape OpenType arabic and the embedded subset
+        doesn't carry presentation-form codepoints, so feeding pre-shaped
+        text fails the cmap. insert_htmlbox routes through pymupdf's
+        internal HarfBuzz which does proper contextual shaping.
+        """
+        # Pull style off the matching span (font family + size + colour).
+        original_fontsize: float | None = None
+        original_font_name: str | None = None
+        detected_text_color: tuple[int, int, int] | None = None
+        detected_text_color_01: tuple[float, float, float] = (0.0, 0.0, 0.0)
+
+        def _span_priority(s: dict) -> tuple:
+            txt = s.get("text", "").strip()
+            contains_target = edit.original_text in txt or txt in edit.original_text
+            sb = fitz.Rect(s["bbox"])
+            overlap_top = max(sb.y0, inst.y0)
+            overlap_bot = min(sb.y1, inst.y1)
+            v_overlap = max(0, overlap_bot - overlap_top)
+            return (not contains_target, -v_overlap)
+
+        sorted_spans = sorted(all_spans, key=_span_priority)
+        if sorted_spans:
+            best = sorted_spans[0]
+            original_fontsize = best.get("size")
+            raw_font = best.get("font", "")
+            clean = raw_font.split("+", 1)[-1] if "+" in raw_font else raw_font
+            if clean in self._font_buffers:
+                original_font_name = clean
+            cint = best.get("color", 0)
+            if isinstance(cint, int):
+                detected_text_color = (
+                    (cint >> 16) & 0xFF,
+                    (cint >> 8) & 0xFF,
+                    cint & 0xFF,
+                )
+                detected_text_color_01 = _color_int_to_tuple_01(cint)
+
+        bg_color = self._get_background_color_at(page, inst, text_color=detected_text_color)
+
+        # Cover with sampled background colour. Arabic glyphs can extend
+        # slightly outside the logical span bbox (connecting strokes,
+        # marks); pad the cover by ~25% of the bbox height to be safe.
+        h = inst.y1 - inst.y0
+        cover_pad = h * 0.25
+        cover_rect = fitz.Rect(
+            inst.x0 - cover_pad,
+            inst.y0 - cover_pad,
+            inst.x1 + cover_pad,
+            inst.y1 + cover_pad,
+        )
+        page.draw_rect(cover_rect, color=None, fill=bg_color, width=0)
+
+        # Build / reuse the arabic archive.
+        archive, css = self._get_arabic_archive()
+        family = (
+            original_font_name.split("-")[0] if original_font_name else "Lusail"
+        )
+        weight = "700"
+        if original_font_name:
+            if "Light" in original_font_name:
+                weight = "300"
+            elif "Bold" in original_font_name or original_font_name.endswith("-Bd"):
+                weight = "700"
+            else:
+                weight = "400"
+        fontsize = original_fontsize or max((inst.y1 - inst.y0) * 0.85, 6)
+
+        r, g, b = (round(c * 255) for c in detected_text_color_01)
+        html = (
+            f'<div class="cell" style="text-align: right; direction: rtl; '
+            f'font-family: \'{family}\'; font-weight: {weight}; '
+            f'font-size: {fontsize}pt; color: rgb({r},{g},{b});">'
+            f"{edit.new_text}</div>"
+        )
+
+        # Use the original bbox; nowrap CSS lets text overflow rather than
+        # wrap, so single-word replacements stay on one line.
+        rc = page.insert_htmlbox(inst, html, css=css, archive=archive)
+
+        trace = {
+            "path": "arabic-htmlbox",
+            "inst_bbox": [inst.x0, inst.y0, inst.x1, inst.y1],
+            "bg_color_01": list(bg_color),
+            "text_color_01": list(detected_text_color_01),
+            "fontsize": fontsize,
+            "font_family": family,
+            "font_weight": weight,
+            "embedded_font_used": original_font_name,
+            "insert_htmlbox_rc": list(rc) if rc else None,
+        }
+        self.change_log.append(
+            {
+                "page": page_idx + 1,
+                "old": edit.original_text,
+                "new": edit.new_text,
+                "location": f"({inst.x0:.0f}, {inst.y0:.0f})",
+            }
+        )
+        return EditResult(
+            page=page_idx,
+            original_text=edit.original_text,
+            new_text=edit.new_text,
+            replacements=1,
+            ok=True,
+            trace=trace,
+        )
 
     # ------------------------------------------------------------------
     # Background sampling (luminance + text-colour aware border strip)
@@ -308,6 +463,26 @@ class PDFEditor:
             )
 
         page = self.doc[page_idx]
+        is_arabic = _is_arabic(edit.original_text) or _is_arabic(edit.new_text)
+
+        # Arabic edits get their own primitive (insert_htmlbox + HarfBuzz)
+        # because insert_text doesn't do OpenType shaping. Drive the arabic
+        # path off edit.bbox directly: search_for on arabic returns a hit
+        # rect for the visual-order glyph run that often doesn't align with
+        # the get_text("dict") span rect we extracted from. Using the span
+        # bbox keeps cover + insert in sync.
+        if is_arabic:
+            inst = fitz.Rect(edit.bbox)
+            text_dict: dict[str, Any] = page.get_text("dict", clip=inst)  # pyright: ignore[reportAssignmentType]
+            all_spans: list[dict] = []
+            for block in text_dict.get("blocks", []):
+                if block.get("type") == 0:
+                    for line in block.get("lines", []):
+                        for span in line.get("spans", []):
+                            if span.get("text", "").strip():
+                                all_spans.append(span)
+            return self._replace_arabic(edit, page, page_idx, inst, all_spans)
+
         instances = page.search_for(edit.original_text)
 
         # Pick the instance closest to the supplied bbox -- guards against
@@ -334,18 +509,19 @@ class PDFEditor:
         inst = min(instances, key=_center_distance)
 
         # --- per-span font / colour detection ------------------------------
-        text_dict: dict[str, Any] = page.get_text("dict", clip=inst)  # pyright: ignore[reportAssignmentType]
-        original_fontsize: float | None = None
-        original_font_name: str | None = None
-        detected_text_color: tuple[int, int, int] | None = None
-        detected_text_color_01: tuple[float, float, float] = (0.0, 0.0, 0.0)
-        all_spans: list[dict] = []
+        text_dict = page.get_text("dict", clip=inst)
+        all_spans = []
         for block in text_dict.get("blocks", []):
             if block.get("type") == 0:
                 for line in block.get("lines", []):
                     for span in line.get("spans", []):
                         if span.get("text", "").strip():
                             all_spans.append(span)
+
+        original_fontsize: float | None = None
+        original_font_name: str | None = None
+        detected_text_color: tuple[int, int, int] | None = None
+        detected_text_color_01: tuple[float, float, float] = (0.0, 0.0, 0.0)
 
         def _span_priority(s: dict) -> tuple:
             txt = s.get("text", "").strip()

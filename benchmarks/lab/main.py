@@ -16,7 +16,9 @@ API base: http://localhost:8201/api
 
 from __future__ import annotations
 
+import json
 import logging
+import re
 import uuid
 from pathlib import Path
 
@@ -42,6 +44,94 @@ RESULTS_DIR = REPO_ROOT / "benchmarks" / "results"
 SESSIONS_DIR = RESULTS_DIR / ".sessions"
 SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
 UI_DIST = Path(__file__).parent / "ui" / "dist"
+REPORTS_OUT = REPO_ROOT / "reports" / "out"
+
+
+# ---------------------------------------------------------------------------
+# Static research metadata (reflects research/wiki/ + the typst report)
+# ---------------------------------------------------------------------------
+
+APPROACHES = [
+    {
+        "id": "A",
+        "name": "Extract → auto-PDFFieldDefinition → existing editor",
+        "status": "killed",
+        "verdict": "E1: extractors fragmented spans on Illustrator-exported PDFs; round-trip SSIM < 0.9. Useful as a *detector* for the overlay path, not a standalone solver.",
+    },
+    {
+        "id": "B",
+        "name": "PDF → HTML → PDF roundtrip",
+        "status": "not-started",
+        "verdict": "Only required if Approach C fails on real-world uploads. Open as escape hatch.",
+    },
+    {
+        "id": "C",
+        "name": "Overlay — detect span, cover, redraw at same bbox in same font",
+        "status": "chosen",
+        "verdict": "Both Latin and Arabic working in the lab on both samples. Masked SSIM > 0.9998 on non-edited regions.",
+    },
+    {
+        "id": "D",
+        "name": "Layout-AI (Vision LLMs) as a detector",
+        "status": "not-started",
+        "verdict": "Useful as a primitive for fields the cheap regex extractor misses (free-form labels, photographic backgrounds).",
+    },
+]
+
+
+EXPERIMENTS = [
+    {
+        "id": "e1",
+        "name": "Extract-to-structure: pdfplumber + pymupdf round-trip render",
+        "outcome": "killed",
+        "takeaway": "Both extractors below 0.9 SSIM on Illustrator exports. Approach A dies as a standalone path.",
+        "results_glob": "e1_*.json",
+    },
+    {
+        "id": "e2",
+        "name": "Overlay editing — bare bbox-anchored redact + insert",
+        "outcome": "retracted",
+        "takeaway": "First 'pass' was a harness bug; eyeball check showed Helv fallback, wrong colour, seam, adjacent-label clipping. Triggered the engine port.",
+        "results_glob": "e2_*.json",
+    },
+    {
+        "id": "e5",
+        "name": "Arabic round-trip via insert_text",
+        "outcome": "partial-kill",
+        "takeaway": "insert_text doesn't shape OpenType. Glyphs disconnected, wrong order. Showed Approach C needs a different primitive for Arabic.",
+        "results_glob": None,
+    },
+    {
+        "id": "e6",
+        "name": "Lab: ported PDFEditor engine + UI on Latin",
+        "outcome": "passed",
+        "takeaway": "Per-span font/colour, ascender/descender-trimmed cover, luminance + text-colour-aware bg sample. Latin gate-1 SSIM 0.99997 (qms) / 0.99986 (water).",
+        "results_glob": "e6_*.json",
+    },
+    {
+        "id": "e7",
+        "name": "Arabic via insert_htmlbox + pymupdf.Archive",
+        "outcome": "passed",
+        "takeaway": "HarfBuzz-shaped Arabic at the same bbox in the embedded Lusail font. search_for-vs-span-bbox bug fixed by driving the Arabic path off the extracted span bbox directly.",
+        "results_glob": None,
+    },
+]
+
+
+OPEN_QUESTIONS = [
+    {
+        "title": "Editability gate",
+        "body": "The lab surfaces every numeric and Arabic span (140 + 104 on the QMS poster). Production likely wants a 'select which fields are editable' or 'review before edit' gate to keep the operator's table small.",
+    },
+    {
+        "title": "Photographic backgrounds",
+        "body": "Cover-rect sampler is luminance + text-colour aware on solid panels and accent-coloured pills. Untested on photographic / gradient backgrounds. Have a fallback in mind: tight bbox-shaped patch via neighbour-pixel inpainting rather than the dominant-colour fill.",
+    },
+    {
+        "title": "Glyph-coverage preflight",
+        "body": "Subsetted fonts only carry glyphs the original document used. Latin path silently substitutes; Arabic path falls back to pymupdf default on missing glyphs. Production needs a preflight that flags unsupported new values before applying.",
+    },
+]
 
 app = FastAPI(title="Dynamic Editing Lab", version="0.1.0")
 app.add_middleware(
@@ -326,6 +416,71 @@ def render_session_crop(
     path = _resolve_session_pdf(session_id)
     png = _render_crop_png(path.read_bytes(), page, (x0, y0, x1, y1), pad, dpi)
     return Response(content=png, media_type="image/png")
+
+
+@app.get("/api/findings")
+def findings():
+    """Hand the UI everything it needs to render the Findings tab.
+
+    Static metadata for approaches / experiments / open questions, plus a
+    live summary of the most recent e6 results JSON so the SSIM numbers
+    in the UI track the latest run.
+    """
+    # Pull the most recent e6 result for live metrics.
+    latest_e6: dict | None = None
+    e6_files = sorted(RESULTS_DIR.glob("e6_*.json"), reverse=True)
+    if e6_files:
+        try:
+            with e6_files[0].open() as f:
+                e6 = json.load(f)
+            metrics: list[dict] = []
+            for r in e6.get("results", []):
+                masked = r.get("fidelity_masked_edited_only_per_page", [])
+                ssims = [p["ssim"] for p in masked if p.get("ssim") is not None]
+                metrics.append(
+                    {
+                        "sample": r["sample"],
+                        "edits": r["edit_count"],
+                        "edit_seconds": r.get("edit_seconds"),
+                        "masked_ssim_mean": (sum(ssims) / len(ssims)) if ssims else None,
+                    }
+                )
+            latest_e6 = {
+                "file": e6_files[0].name,
+                "started_at": e6.get("started_at"),
+                "metrics": metrics,
+            }
+        except Exception as e:
+            logger.warning("failed to parse %s: %s", e6_files[0], e)
+
+    # Surface every results JSON (id parsed from filename).
+    results_files = []
+    for p in sorted(RESULTS_DIR.glob("*.json")):
+        m = re.match(r"^([a-z]\d+)_", p.name)
+        results_files.append({"file": p.name, "experiment_id": m.group(1) if m else None})
+
+    return {
+        "approaches": APPROACHES,
+        "experiments": EXPERIMENTS,
+        "open_questions": OPEN_QUESTIONS,
+        "latest_e6": latest_e6,
+        "results_files": results_files,
+        "report": {
+            "available": (REPORTS_OUT / "dynamic-editing-demo-v0.2.pdf").exists(),
+            "url": "/api/report.pdf",
+        },
+    }
+
+
+@app.get("/api/report.pdf")
+def serve_report():
+    pdf = REPORTS_OUT / "dynamic-editing-demo-v0.2.pdf"
+    if not pdf.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="report not compiled. run: docker run --rm -v $PWD:/work --workdir /work ghcr.io/typst/typst:latest compile reports/src/dynamic-editing-demo-v0.2.typ reports/out/dynamic-editing-demo-v0.2.pdf",
+        )
+    return FileResponse(str(pdf), media_type="application/pdf", filename=pdf.name)
 
 
 # Serve the built UI when present (prod-style container only).

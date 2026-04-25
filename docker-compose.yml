@@ -13,4 +13,5 @@ services:
     volumes:
       - ./datasets:/app/datasets:ro
       - ./benchmarks/results:/app/benchmarks/results
+      - ./reports:/app/reports
     restart: unless-stopped
