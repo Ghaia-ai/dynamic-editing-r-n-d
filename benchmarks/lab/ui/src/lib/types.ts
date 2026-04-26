@@ -39,3 +39,38 @@ export type ApplyResponse = {
   page_count: number
   results: ApplyResult[]
 }
+
+export type MethodId = 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+
+export type MethodDef = {
+  id: MethodId
+  name: string
+  tagline: string
+  implementation: 'live' | 'stub'
+  what_runs: string
+  what_lab_shows: string
+  limits: string
+  verdict: string
+}
+
+export type MethodRunResponse = {
+  method_id: MethodId
+  name: string
+  implementation: 'live' | 'stub'
+  sample: string
+  page_count: number
+  page_sizes: [number, number][]
+  // A, C return these
+  detect: DetectResponse | null
+  apply: ApplyResponse | null
+  // B, D, E, F return this (shape varies per method)
+  method_result: Record<string, unknown> | null
+  notes: string[]
+  evidence: {
+    tagline: string
+    what_runs: string
+    what_lab_shows: string
+    limits: string
+    verdict: string
+  } | null
+}

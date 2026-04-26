@@ -6,7 +6,6 @@ import {
   CircleDashed,
   AlertTriangle,
   Sparkles,
-  FileText,
   Download,
   Beaker,
 } from 'lucide-react'
@@ -19,10 +18,7 @@ type Approach = {
   verdict: string
 }
 
-type RuledOut = {
-  name: string
-  why: string
-}
+type RuledOut = { name: string; why: string }
 
 type Experiment = {
   id: string
@@ -32,10 +28,7 @@ type Experiment = {
   results_glob: string | null
 }
 
-type OpenQuestion = {
-  title: string
-  body: string
-}
+type OpenQuestion = { title: string; body: string }
 
 type Metric = {
   sample: string
@@ -49,61 +42,57 @@ type FindingsResponse = {
   ruled_out: RuledOut[]
   experiments: Experiment[]
   open_questions: OpenQuestion[]
-  latest_e6: {
-    file: string
-    started_at: string
-    metrics: Metric[]
-  } | null
+  latest_e6: { file: string; started_at: string; metrics: Metric[] } | null
   results_files: { file: string; experiment_id: string | null }[]
   report: { available: boolean; url: string; version: string | null }
 }
 
-const STATUS_BADGES: Record<string, { label: string; className: string; Icon: typeof CheckCircle2 }> = {
+const STATUS: Record<string, { label: string; tone: string; Icon: typeof CheckCircle2 }> = {
   chosen: {
     label: 'chosen',
-    className: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
+    tone: 'bg-[var(--ok-soft)] text-[color:var(--ok)] border-[color:var(--ok-soft)]',
     Icon: CheckCircle2,
   },
   passed: {
     label: 'passed',
-    className: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
+    tone: 'bg-[var(--ok-soft)] text-[color:var(--ok)] border-[color:var(--ok-soft)]',
     Icon: CheckCircle2,
   },
   killed: {
     label: 'killed',
-    className: 'border-red-500/40 bg-red-500/10 text-red-300',
+    tone: 'bg-[var(--bad-soft)] text-[color:var(--bad)] border-[color:var(--bad-soft)]',
     Icon: XCircle,
   },
   'partial-kill': {
     label: 'partial kill',
-    className: 'border-orange-500/40 bg-orange-500/10 text-orange-300',
+    tone: 'bg-[var(--warn-soft)] text-[color:var(--warn)] border-[color:var(--warn-soft)]',
     Icon: AlertTriangle,
   },
   retracted: {
     label: 'retracted',
-    className: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
+    tone: 'bg-[var(--warn-soft)] text-[color:var(--warn)] border-[color:var(--warn-soft)]',
     Icon: AlertTriangle,
   },
   'not-started': {
     label: 'not started',
-    className: 'border-zinc-700 bg-zinc-900 text-zinc-400',
+    tone: 'bg-[var(--line-soft)] text-[color:var(--ink-muted)] border-[color:var(--line)]',
     Icon: CircleDashed,
   },
   'baseline-to-beat': {
-    label: 'baseline-to-beat',
-    className: 'border-blue-500/40 bg-blue-500/10 text-blue-300',
+    label: 'baseline to beat',
+    tone: 'bg-[var(--accent-soft)] text-[color:var(--accent-ink)] border-[color:var(--accent-soft)]',
     Icon: Sparkles,
   },
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_BADGES[status] ?? STATUS_BADGES['not-started']
+function StatusPill({ status }: { status: string }) {
+  const cfg = STATUS[status] ?? STATUS['not-started']
   const Icon = cfg.Icon
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] uppercase tracking-wider',
-        cfg.className,
+        'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] uppercase tracking-wider border',
+        cfg.tone,
       )}
     >
       <Icon className="size-3" />
@@ -123,160 +112,154 @@ export default function Findings() {
       .catch((e) => setError(String(e)))
   }, [])
 
-  if (error) {
-    return <div className="p-6 text-red-400 text-sm">error: {error}</div>
-  }
-  if (!data) {
-    return <div className="p-6 text-zinc-500 text-sm">loading…</div>
-  }
+  if (error)
+    return (
+      <div className="max-w-[900px] mx-auto px-8 py-8 text-[13px] text-[color:var(--bad)]">
+        error: {error}
+      </div>
+    )
+  if (!data)
+    return (
+      <div className="max-w-[900px] mx-auto px-8 py-8 text-[13px] text-[color:var(--ink-muted)]">
+        loading…
+      </div>
+    )
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-5xl mx-auto p-6 space-y-8"
+      className="max-w-[1000px] mx-auto px-8 py-8 space-y-10"
     >
-      <header className="space-y-3">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Findings</h1>
-            <p className="text-sm text-zinc-400 mt-1">
-              What we explored, what we ran, what we learned. Mirrors the typst report at{' '}
-              <code className="text-zinc-300">reports/src/dynamic-editing-demo-v0.2.typ</code>.
-            </p>
-          </div>
-          {data.report.available && (
-            <a
-              href={data.report.url}
-              className="flex items-center gap-2 px-3 py-2 rounded-md border border-amber-500/40 text-amber-200 text-sm hover:bg-amber-500/10 shrink-0"
-            >
-              <Download className="size-4" />
-              report PDF
-            </a>
-          )}
+      <header className="flex items-center justify-between gap-6">
+        <div>
+          <h1 className="text-[24px] font-semibold tracking-tight">Findings</h1>
+          <p className="text-[13px] text-[color:var(--ink-muted)] mt-1">
+            What we explored, what we ran, what we learned. The lab tab tests the live ones; this
+            tab summarises everything.
+          </p>
         </div>
+        {data.report.available && (
+          <a
+            href={data.report.url}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-[13px] border border-[color:var(--line)] bg-[var(--surface)] hover:bg-[var(--line-soft)] shrink-0"
+          >
+            <Download className="size-4" />
+            Report PDF
+          </a>
+        )}
       </header>
 
       <BottomLine metrics={data.latest_e6?.metrics ?? []} />
 
-      <section>
-        <div className="flex items-baseline justify-between mb-3">
-          <h2 className="text-xs uppercase tracking-wider text-zinc-500">
-            Approaches we evaluated
-          </h2>
-          <span className="text-[10px] text-zinc-500">
-            A-D from initial brief · E-F from industry survey
-          </span>
-        </div>
+      <Section title="Approaches we evaluated" hint="A–D from the brief · E–F from the survey">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {data.approaches.map((a) => (
             <div
               key={a.id}
               className={cn(
-                'rounded-lg border p-4 space-y-2',
+                'rounded-md border bg-[var(--surface)] p-4 space-y-2',
                 a.status === 'chosen'
-                  ? 'border-emerald-500/40 bg-emerald-500/5'
-                  : 'border-zinc-800 bg-zinc-900',
+                  ? 'border-[color:var(--ok)]'
+                  : 'border-[color:var(--line)]',
               )}
             >
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-mono text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 shrink-0">
+                  <span className="font-mono text-[12px] px-2 py-0.5 rounded bg-[var(--line-soft)] text-[color:var(--ink-soft)] shrink-0">
                     {a.id}
                   </span>
-                  <span className="font-medium text-sm truncate">{a.name}</span>
+                  <span className="font-medium text-[14px] truncate">{a.name}</span>
                 </div>
-                <div className="shrink-0">
-                  <StatusBadge status={a.status} />
-                </div>
+                <StatusPill status={a.status} />
               </div>
-              <p className="text-xs text-zinc-400 leading-relaxed">{a.verdict}</p>
+              <p className="text-[13px] text-[color:var(--ink-soft)] leading-relaxed">{a.verdict}</p>
             </div>
           ))}
         </div>
-      </section>
+      </Section>
 
       {data.ruled_out && data.ruled_out.length > 0 && (
-        <section>
-          <h2 className="text-xs uppercase tracking-wider text-zinc-500 mb-3">
-            Ruled out by industry survey
-            <span className="ml-2 text-[10px] text-zinc-600 normal-case">
-              variants of A-D or doesn't apply to flat exports
-            </span>
-          </h2>
-          <details className="rounded-lg border border-zinc-800 bg-zinc-900">
-            <summary className="cursor-pointer px-4 py-2 text-xs text-zinc-400 hover:text-zinc-200">
+        <Section
+          title="Ruled out by industry survey"
+          hint="variants of A–D or doesn't apply to flat exports"
+        >
+          <details className="rounded-md border border-[color:var(--line)] bg-[var(--surface)]">
+            <summary className="cursor-pointer px-4 py-3 text-[13px] text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]">
               {data.ruled_out.length} approaches surveyed and ruled out — click to expand
             </summary>
-            <div className="divide-y divide-zinc-800">
+            <div className="divide-y divide-[color:var(--line)]">
               {data.ruled_out.map((r, i) => (
                 <div key={i} className="px-4 py-3">
-                  <div className="text-sm font-medium text-zinc-300 mb-1 flex items-center gap-2">
-                    <XCircle className="size-3 text-zinc-600 shrink-0" />
+                  <div className="text-[13px] font-medium mb-1 flex items-center gap-2">
+                    <XCircle className="size-3 text-[color:var(--ink-muted)]" />
                     {r.name}
                   </div>
-                  <p className="text-xs text-zinc-500 leading-relaxed pl-5">{r.why}</p>
+                  <p className="text-[12px] text-[color:var(--ink-muted)] leading-relaxed pl-5">
+                    {r.why}
+                  </p>
                 </div>
               ))}
             </div>
           </details>
-        </section>
+        </Section>
       )}
 
-      <section>
-        <h2 className="text-xs uppercase tracking-wider text-zinc-500 mb-3">
-          Experiments we ran
-        </h2>
+      <Section title="Experiments we ran">
         <ol className="space-y-2">
           {data.experiments.map((e) => (
             <li
               key={e.id}
-              className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 flex gap-3 items-start"
+              className="rounded-md border border-[color:var(--line)] bg-[var(--surface)] p-3 flex gap-3 items-start"
             >
-              <Beaker className="size-4 text-zinc-500 shrink-0 mt-0.5" />
+              <Beaker className="size-4 text-[color:var(--ink-muted)] shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-mono text-xs text-amber-300">{e.id}</span>
-                  <span className="text-sm font-medium">{e.name}</span>
-                  <StatusBadge status={e.outcome} />
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="font-mono text-[12px] text-[color:var(--accent-ink)]">{e.id}</span>
+                  <span className="text-[14px] font-medium">{e.name}</span>
+                  <StatusPill status={e.outcome} />
                 </div>
-                <p className="text-xs text-zinc-400 leading-relaxed">{e.takeaway}</p>
+                <p className="text-[12px] text-[color:var(--ink-soft)] leading-relaxed">{e.takeaway}</p>
               </div>
             </li>
           ))}
         </ol>
-      </section>
+      </Section>
 
       {data.latest_e6 && (
-        <section>
-          <h2 className="text-xs uppercase tracking-wider text-zinc-500 mb-3">
-            Latest gate-1 metrics —{' '}
-            <span className="text-zinc-400 font-mono normal-case">{data.latest_e6.file}</span>
-          </h2>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="text-xs text-zinc-500">
-                <tr className="border-b border-zinc-800 text-left">
-                  <th className="px-4 py-2 font-normal">sample</th>
-                  <th className="px-4 py-2 font-normal text-right">edits</th>
-                  <th className="px-4 py-2 font-normal text-right">edit time</th>
-                  <th className="px-4 py-2 font-normal text-right">masked ssim</th>
+        <Section
+          title="Latest gate-1 metrics"
+          hint={data.latest_e6.file}
+        >
+          <div className="rounded-md border border-[color:var(--line)] bg-[var(--surface)] overflow-hidden">
+            <table className="w-full text-[13px]">
+              <thead className="text-[11px] uppercase tracking-wider text-[color:var(--ink-muted)] bg-[var(--line-soft)]">
+                <tr className="text-left">
+                  <th className="px-4 py-2 font-medium">sample</th>
+                  <th className="px-4 py-2 font-medium text-right">edits</th>
+                  <th className="px-4 py-2 font-medium text-right">edit time</th>
+                  <th className="px-4 py-2 font-medium text-right">masked ssim</th>
                 </tr>
               </thead>
               <tbody>
                 {data.latest_e6.metrics.map((m) => (
-                  <tr key={m.sample} className="border-b border-zinc-900 last:border-b-0">
-                    <td className="px-4 py-2 font-mono text-xs">{m.sample}</td>
-                    <td className="px-4 py-2 text-right">{m.edits}</td>
-                    <td className="px-4 py-2 text-right text-zinc-400">
+                  <tr
+                    key={m.sample}
+                    className="border-t border-[color:var(--line-soft)] last:border-b-0"
+                  >
+                    <td className="px-4 py-2 font-mono text-[12px]">{m.sample}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{m.edits}</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-[color:var(--ink-muted)]">
                       {m.edit_seconds !== null ? `${m.edit_seconds.toFixed(2)}s` : '—'}
                     </td>
                     <td className="px-4 py-2 text-right">
                       {m.masked_ssim_mean !== null ? (
                         <span
                           className={cn(
-                            'font-mono font-semibold',
-                            m.masked_ssim_mean >= 0.99 ? 'text-emerald-300' : 'text-amber-300',
+                            'font-mono font-semibold tabular-nums',
+                            m.masked_ssim_mean >= 0.99
+                              ? 'text-[color:var(--ok)]'
+                              : 'text-[color:var(--warn)]',
                           )}
                         >
                           {m.masked_ssim_mean.toFixed(5)}
@@ -290,38 +273,30 @@ export default function Findings() {
               </tbody>
             </table>
           </div>
-        </section>
+        </Section>
       )}
 
-      <section>
-        <h2 className="text-xs uppercase tracking-wider text-zinc-500 mb-3 flex items-center gap-2">
-          <Sparkles className="size-3" />
-          Open questions for v1
-        </h2>
+      <Section title="Open questions for v1">
         <div className="space-y-2">
           {data.open_questions.map((q) => (
             <div
               key={q.title}
-              className="rounded-lg border border-zinc-800 bg-zinc-900 p-3"
+              className="rounded-md border border-[color:var(--line)] bg-[var(--surface)] p-3"
             >
-              <div className="text-sm font-medium mb-1">{q.title}</div>
-              <p className="text-xs text-zinc-400 leading-relaxed">{q.body}</p>
+              <div className="text-[13px] font-medium mb-1">{q.title}</div>
+              <p className="text-[12px] text-[color:var(--ink-soft)] leading-relaxed">{q.body}</p>
             </div>
           ))}
         </div>
-      </section>
+      </Section>
 
-      <section>
-        <h2 className="text-xs uppercase tracking-wider text-zinc-500 mb-3 flex items-center gap-2">
-          <FileText className="size-3" />
-          Result JSONs
-        </h2>
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
-          <ul className="space-y-1 text-xs font-mono text-zinc-400">
+      <Section title="Result JSONs">
+        <div className="rounded-md border border-[color:var(--line)] bg-[var(--surface)] p-3">
+          <ul className="space-y-1 text-[12px] font-mono text-[color:var(--ink-soft)]">
             {data.results_files.map((f) => (
               <li key={f.file} className="flex items-center gap-2">
                 {f.experiment_id && (
-                  <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-amber-300 text-[10px]">
+                  <span className="px-1.5 py-0.5 rounded bg-[var(--line-soft)] text-[color:var(--accent-ink)] text-[10px]">
                     {f.experiment_id}
                   </span>
                 )}
@@ -330,8 +305,30 @@ export default function Findings() {
             ))}
           </ul>
         </div>
-      </section>
+      </Section>
     </motion.div>
+  )
+}
+
+function Section({
+  title,
+  hint,
+  children,
+}: {
+  title: string
+  hint?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section>
+      <div className="flex items-baseline justify-between mb-3">
+        <h2 className="text-[11px] uppercase tracking-wider text-[color:var(--ink-muted)] font-medium">
+          {title}
+        </h2>
+        {hint && <span className="text-[11px] text-[color:var(--ink-muted)]">{hint}</span>}
+      </div>
+      {children}
+    </section>
   )
 }
 
@@ -340,20 +337,26 @@ function BottomLine({ metrics }: { metrics: Metric[] }) {
   return (
     <div
       className={cn(
-        'rounded-lg border p-4',
-        allOk ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-zinc-800 bg-zinc-900',
+        'rounded-md border p-5',
+        allOk ? 'border-[color:var(--ok)] bg-[var(--ok-soft)]' : 'border-[color:var(--line)] bg-[var(--surface)]',
       )}
     >
-      <div className="text-xs uppercase tracking-wider text-zinc-500 mb-2">Bottom line</div>
-      <p className="text-sm leading-relaxed">
+      <div className="text-[11px] uppercase tracking-wider text-[color:var(--ink-muted)] mb-2">
+        Bottom line
+      </div>
+      <p className="text-[14px] leading-relaxed text-[color:var(--ink)]">
         Approach C (overlay) handles{' '}
-        <span className="text-emerald-300 font-medium">both Latin and Arabic</span> on the two sample
-        posters. Same engine, two primitives:{' '}
-        <code className="text-zinc-300">insert_text</code> for Latin (preserves the embedded font
-        subset),{' '}
-        <code className="text-zinc-300">insert_htmlbox</code> for Arabic (HarfBuzz handles
-        contextual shaping). Masked SSIM on non-edited regions stays above{' '}
-        <span className="text-emerald-300 font-mono font-semibold">0.9998</span>. Recommendation:
+        <span className="font-semibold text-[color:var(--ok)]">both Latin and Arabic</span> on the two
+        sample posters. Same engine, two primitives:{' '}
+        <code className="text-[12px] bg-white px-1 py-0.5 rounded border border-[color:var(--line)]">
+          insert_text
+        </code>{' '}
+        for Latin (preserves the embedded font subset),{' '}
+        <code className="text-[12px] bg-white px-1 py-0.5 rounded border border-[color:var(--line)]">
+          insert_htmlbox
+        </code>{' '}
+        for Arabic (HarfBuzz handles contextual shaping). Masked SSIM on non-edited regions stays above{' '}
+        <span className="font-mono font-semibold text-[color:var(--ok)]">0.9998</span>. Recommendation:
         adopt for v1; integration plan + open questions in the report.
       </p>
     </div>

@@ -1,64 +1,82 @@
 import { useEffect, useMemo, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Wand2, Download, RotateCw, Loader2, Info, AlertCircle } from 'lucide-react'
+import { Loader2, Wand2, Download, RotateCw } from 'lucide-react'
 import {
-  apply,
-  detect,
+  listMethods,
   listSamples,
+  runMethod,
   samplePagePngUrl,
   sessionPagePngUrl,
   sessionPdfUrl,
 } from '@/lib/api'
-import type { ApplyResponse, DetectResponse, Sample } from '@/lib/types'
+import type {
+  ApplyResponse,
+  DetectResponse,
+  MethodDef,
+  MethodId,
+  MethodRunResponse,
+  Sample,
+} from '@/lib/types'
 import { cn } from '@/lib/utils'
 import SamplePicker from './SamplePicker'
+import MethodTabs from './MethodTabs'
 import PdfPreview from './PdfPreview'
 import FieldsTable from './FieldsTable'
 import ChangesPanel from './ChangesPanel'
+import StubMethodPanel from './StubMethodPanel'
+import MethodBPanel from './MethodBPanel'
+import MethodDPanel from './MethodDPanel'
+import MethodEPanel from './MethodEPanel'
+import MethodFPanel from './MethodFPanel'
 
-type RunState = 'idle' | 'detecting' | 'ready' | 'applying' | 'done' | 'error'
+type RunState = 'idle' | 'loading' | 'ready' | 'applying' | 'error'
 
 export default function Lab() {
   const [samples, setSamples] = useState<Sample[]>([])
-  const [selected, setSelected] = useState<string | null>(null)
-  const [detectResp, setDetectResp] = useState<DetectResponse | null>(null)
+  const [methods, setMethods] = useState<MethodDef[]>([])
+  const [sample, setSample] = useState<string | null>(null)
+  const [method, setMethod] = useState<MethodId>('C')
+  const [run, setRun] = useState<MethodRunResponse | null>(null)
   const [values, setValues] = useState<Record<string, string>>({})
-  const [applyResp, setApplyResp] = useState<ApplyResponse | null>(null)
   const [state, setState] = useState<RunState>('idle')
   const [error, setError] = useState<string | null>(null)
-  const [previewPage, setPreviewPage] = useState(0)
+  const [page, setPage] = useState(0)
 
+  // initial load
   useEffect(() => {
-    listSamples()
-      .then((r) => {
-        setSamples(r.samples)
-        if (r.samples.length > 0 && !selected) setSelected(r.samples[0].name)
+    Promise.all([listSamples(), listMethods()])
+      .then(([s, m]) => {
+        setSamples(s.samples)
+        setMethods(m.methods)
+        if (s.samples.length > 0) setSample(s.samples[0].name)
       })
       .catch((e) => setError(String(e)))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // run on (sample, method) change
   useEffect(() => {
-    if (!selected) return
-    setState('detecting')
-    setApplyResp(null)
-    setValues({})
+    if (!sample) return
+    setState('loading')
     setError(null)
-    setPreviewPage(0)
-    detect(selected)
-      .then((d) => {
-        setDetectResp(d)
+    setValues({})
+    setRun(null)
+    setPage(0)
+    runMethod(method, sample)
+      .then((r) => {
+        setRun(r)
         setState('ready')
       })
       .catch((e) => {
         setError(String(e))
         setState('error')
       })
-  }, [selected])
+  }, [sample, method])
+
+  const detect: DetectResponse | null = run?.detect ?? null
+  const apply: ApplyResponse | null = run?.apply ?? null
 
   const dirtyEdits = useMemo(() => {
-    if (!detectResp) return []
-    return detectResp.spans
+    if (!detect) return []
+    return detect.spans
       .filter((s) => s.editable)
       .map((s) => {
         const v = values[s.id]
@@ -66,31 +84,38 @@ export default function Lab() {
         return { page: s.page, bbox: s.bbox, original_text: s.text, new_text: v }
       })
       .filter((x): x is NonNullable<typeof x> => x !== null)
-  }, [detectResp, values])
+  }, [detect, values])
 
   const dirtyHighlights = useMemo(() => {
-    if (!detectResp) return []
-    return detectResp.spans
+    if (!detect) return []
+    return detect.spans
       .filter((s) => {
         const v = values[s.id]
         return v !== undefined && v !== '' && v !== s.text
       })
       .map((s) => ({ page: s.page, bbox: s.bbox }))
-  }, [detectResp, values])
+  }, [detect, values])
 
-  // True when user typed new edits after the last successful generate.
-  const editedIsStale = applyResp !== null && dirtyEdits.length > 0
+  // For Approach A (detect-only), highlight every detected span lightly so
+  // users see what the detector finds.
+  const detectHighlights = useMemo(() => {
+    if (!detect || method !== 'A') return []
+    return detect.spans.map((s) => ({
+      page: s.page,
+      bbox: s.bbox,
+      color: s.editable ? 'var(--accent)' : 'var(--ink-muted)',
+    }))
+  }, [detect, method])
 
-  const onApply = async () => {
-    if (!selected || dirtyEdits.length === 0) return
+  const onGenerate = async () => {
+    if (!sample || dirtyEdits.length === 0) return
     setState('applying')
     setError(null)
     try {
-      const r = await apply(selected, dirtyEdits)
-      setApplyResp(r)
-      // jump preview to the first changed page
-      if (dirtyEdits[0]) setPreviewPage(dirtyEdits[0].page)
-      setState('done')
+      const r = await runMethod(method, sample, dirtyEdits)
+      setRun(r)
+      if (dirtyEdits[0]) setPage(dirtyEdits[0].page)
+      setState('ready')
     } catch (e) {
       setError(String(e))
       setState('error')
@@ -99,190 +124,168 @@ export default function Lab() {
 
   const onReset = () => {
     setValues({})
-    setApplyResp(null)
-    setState(detectResp ? 'ready' : 'idle')
-    setPreviewPage(0)
+    if (run?.apply) {
+      // strip the apply but keep detect
+      setRun({ ...run, apply: null })
+    }
+    setPage(0)
   }
 
+  const editedIsStale = apply !== null && dirtyEdits.length > 0
+  const activeMethod = methods.find((m) => m.id === method)
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b border-zinc-900 bg-zinc-950/80 backdrop-blur sticky top-0 z-10">
-        <div className="px-6 py-4 flex items-start justify-between gap-6">
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-lg font-semibold tracking-tight">Dynamic PDF Editing Lab</h1>
-              <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30">
-                Method: Overlay (Approach C)
-              </span>
-            </div>
-            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed max-w-3xl">
-              Testing whether arbitrary uploaded posters can be edited surgically: detect numeric values, cover them with a colour-matched rectangle, and draw the new value at the same bbox in the same font. Other approaches (B: HTML roundtrip, D: layout-AI) live in the report — only Approach&nbsp;C is wired into the lab.
-            </p>
-            <ol className="flex items-center gap-2 text-xs mt-3">
-              <Step n={1} label="Pick a sample" active={selected !== null} />
-              <Step n={2} label={`Type new values (${dirtyEdits.length} pending)`} active={dirtyEdits.length > 0} />
-              <Step n={3} label="Generate & compare" active={applyResp !== null} />
-            </ol>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={onReset}
-              disabled={state === 'detecting' || state === 'applying'}
-              className="flex items-center gap-2 px-3 py-2 rounded-md border border-zinc-800 bg-zinc-900 text-sm hover:bg-zinc-800 disabled:opacity-40"
-            >
-              <RotateCw className="size-4" /> reset
-            </button>
-            <button
-              onClick={onApply}
-              disabled={dirtyEdits.length === 0 || state === 'applying'}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors',
-                dirtyEdits.length === 0
-                  ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                  : 'bg-amber-500 text-zinc-950 hover:bg-amber-400',
-              )}
-            >
-              {state === 'applying' ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Wand2 className="size-4" />
-              )}
-              generate ({dirtyEdits.length})
-            </button>
-            {applyResp && (
-              <a
-                href={sessionPdfUrl(applyResp.session_id)}
-                className="flex items-center gap-2 px-3 py-2 rounded-md border border-amber-500/40 text-amber-200 text-sm hover:bg-amber-500/10"
-              >
-                <Download className="size-4" /> edited PDF
-              </a>
-            )}
-          </div>
-        </div>
-        <div className="px-6 pb-3">
-          <SamplePicker samples={samples} selected={selected} onSelect={setSelected} />
-        </div>
-      </header>
-
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-4 p-4 min-h-0">
-        <section className="flex flex-col gap-3 min-h-0">
-          <AnimatePresence mode="wait">
-            {applyResp && detectResp && selected ? (
-              <motion.div
-                key="comparing"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col gap-3 min-h-0"
-              >
-                <div className="grid grid-cols-2 gap-4">
-                  <PdfPreview
-                    label="Original"
-                    pageCount={detectResp.page_count}
-                    pngUrlForPage={(p) => samplePagePngUrl(selected, p)}
-                    pageSizesPt={detectResp.page_sizes}
-                    highlightBboxes={dirtyHighlights}
-                    initialPage={previewPage}
-                  />
-                  <div className="relative">
-                    <PdfPreview
-                      label="Edited"
-                      pageCount={applyResp.page_count}
-                      pngUrlForPage={(p) => sessionPagePngUrl(applyResp.session_id, p)}
-                      initialPage={previewPage}
-                    />
-                    {editedIsStale && (
-                      <div className="absolute inset-0 bg-zinc-950/70 rounded-lg flex items-center justify-center pointer-events-none">
-                        <div className="text-amber-300 text-xs flex items-center gap-2 px-3 py-1.5 rounded-md bg-zinc-950/90 border border-amber-500/40">
-                          <AlertCircle className="size-3" />
-                          stale — click generate to apply your new edits
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <ChangesPanel
-                  sample={selected}
-                  sessionId={applyResp.session_id}
-                  results={applyResp.results}
-                />
-              </motion.div>
-            ) : (
-              detectResp &&
-              selected && (
-                <motion.div
-                  key="orig"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="h-full min-h-0"
+    <div className="flex-1 min-h-0 flex flex-col">
+      {/* control row: sample picker + method tabs + run button */}
+      <div className="bg-[var(--surface)] border-b border-[color:var(--line)]">
+        <div className="max-w-[1400px] mx-auto px-8 py-4 flex flex-wrap items-center justify-between gap-4">
+          <SamplePicker samples={samples} selected={sample} onSelect={setSample} />
+          <div className="flex items-center gap-2">
+            {method === 'C' && (
+              <>
+                <button
+                  onClick={onReset}
+                  disabled={state === 'loading' || state === 'applying'}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] text-[color:var(--ink-soft)] hover:bg-[var(--line-soft)] disabled:opacity-40"
                 >
-                  {dirtyEdits.length === 0 && (
-                    <div className="mb-3 flex items-start gap-2 text-xs text-zinc-400 rounded-md border border-zinc-800 bg-zinc-900 p-3">
-                      <Info className="size-4 shrink-0 mt-0.5 text-zinc-500" />
-                      <div>
-                        <span className="text-zinc-200">Type a number into the table on the right.</span>{' '}
-                        Edited fields will get an amber tint and a highlight here on the preview, then click{' '}
-                        <span className="text-amber-300">generate</span> to overlay them onto the PDF.
-                      </div>
-                    </div>
+                  <RotateCw className="size-3.5" />
+                  Reset
+                </button>
+                <button
+                  onClick={onGenerate}
+                  disabled={dirtyEdits.length === 0 || state === 'applying'}
+                  className={cn(
+                    'inline-flex items-center gap-2 px-4 py-1.5 rounded-md text-[13px] font-medium transition-colors',
+                    dirtyEdits.length === 0
+                      ? 'bg-[var(--line-soft)] text-[color:var(--ink-muted)] cursor-not-allowed'
+                      : 'bg-[var(--accent)] text-white hover:opacity-90',
                   )}
-                  <PdfPreview
-                    label="Original"
-                    pageCount={detectResp.page_count}
-                    pngUrlForPage={(p) => samplePagePngUrl(selected, p)}
-                    pageSizesPt={detectResp.page_sizes}
-                    highlightBboxes={dirtyHighlights}
-                    initialPage={previewPage}
-                  />
-                </motion.div>
-              )
+                >
+                  {state === 'applying' ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Wand2 className="size-3.5" />
+                  )}
+                  Generate
+                  {dirtyEdits.length > 0 && (
+                    <span className="text-[11px] opacity-80">({dirtyEdits.length})</span>
+                  )}
+                </button>
+                {apply && (
+                  <a
+                    href={sessionPdfUrl(apply.session_id)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] text-[color:var(--ink-soft)] hover:bg-[var(--line-soft)]"
+                  >
+                    <Download className="size-3.5" />
+                    Download PDF
+                  </a>
+                )}
+              </>
             )}
-          </AnimatePresence>
-        </section>
+          </div>
+        </div>
+        <div className="max-w-[1400px] mx-auto px-8 pb-4">
+          <MethodTabs
+            methods={methods}
+            current={method}
+            onSelect={setMethod}
+          />
+        </div>
+      </div>
 
-        <section className="flex flex-col gap-3 min-h-0">
-          {state === 'detecting' && (
-            <div className="flex items-center gap-2 text-zinc-500 text-sm">
-              <Loader2 className="size-4 animate-spin" />
-              detecting editable spans…
-            </div>
-          )}
+      {/* method body */}
+      <div className="flex-1 min-h-0 overflow-auto">
+        <div className="max-w-[1400px] mx-auto px-8 py-6">
           {error && (
-            <div className="border border-red-900 bg-red-950/30 text-red-300 rounded p-3 text-sm">
+            <div className="mb-4 rounded-md border border-[color:var(--bad-soft)] bg-[var(--bad-soft)] text-[color:var(--bad)] text-[13px] px-4 py-2.5">
               {error}
             </div>
           )}
-          {detectResp && (
-            <FieldsTable
-              spans={detectResp.spans}
-              values={values}
-              onChange={(id, v) => setValues((prev) => ({ ...prev, [id]: v }))}
-            />
-          )}
-        </section>
-      </main>
-    </div>
-  )
-}
 
-function Step({ n, label, active }: { n: number; label: string; active: boolean }) {
-  return (
-    <li
-      className={cn(
-        'flex items-center gap-1.5 px-2 py-1 rounded-full border',
-        active
-          ? 'border-amber-500/40 bg-amber-500/10 text-amber-200'
-          : 'border-zinc-800 bg-zinc-900 text-zinc-500',
-      )}
-    >
-      <span
-        className={cn(
-          'inline-flex items-center justify-center size-4 rounded-full text-[10px] font-mono',
-          active ? 'bg-amber-500 text-zinc-950' : 'bg-zinc-800 text-zinc-400',
-        )}
-      >
-        {n}
-      </span>
-      <span>{label}</span>
-    </li>
+          {state === 'loading' && (
+            <div className="flex items-center gap-2 text-[color:var(--ink-muted)] text-[13px]">
+              <Loader2 className="size-4 animate-spin" />
+              Loading method…
+            </div>
+          )}
+
+          {run && activeMethod && run.implementation === 'stub' && (
+            <StubMethodPanel method={activeMethod} run={run} />
+          )}
+
+          {run && method === 'B' && <MethodBPanel run={run} />}
+          {run && method === 'D' && <MethodDPanel run={run} />}
+          {run && method === 'E' && <MethodEPanel run={run} />}
+          {run && method === 'F' && <MethodFPanel run={run} />}
+
+          {run && run.implementation === 'live' && (method === 'A' || method === 'C') && detect && sample && (
+            <div className="grid grid-cols-1 xl:grid-cols-[1fr_440px] gap-6">
+              {/* left: previews */}
+              <section className="space-y-3 min-w-0">
+                {method === 'C' && apply ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <PdfPreview
+                      label="Original"
+                      pageCount={detect.page_count}
+                      pageSizesPt={detect.page_sizes}
+                      pngUrlForPage={(p) => samplePagePngUrl(sample, p)}
+                      highlightBboxes={dirtyHighlights}
+                      page={page}
+                      onPageChange={setPage}
+                    />
+                    <div className="relative">
+                      <PdfPreview
+                        label="Edited"
+                        pageCount={apply.page_count}
+                        pageSizesPt={detect.page_sizes}
+                        pngUrlForPage={(p) => sessionPagePngUrl(apply.session_id, p)}
+                        page={page}
+                        onPageChange={setPage}
+                      />
+                      {editedIsStale && (
+                        <div className="absolute inset-0 flex items-end justify-center pb-12 pointer-events-none">
+                          <div className="bg-[var(--surface)] border border-[color:var(--line)] shadow-sm rounded-md px-3 py-1.5 text-[12px] text-[color:var(--warn)]">
+                            Stale — click Generate to apply your new edits
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <PdfPreview
+                    label={method === 'A' ? 'Original — every detected span' : 'Original'}
+                    pageCount={detect.page_count}
+                    pageSizesPt={detect.page_sizes}
+                    pngUrlForPage={(p) => samplePagePngUrl(sample, p)}
+                    highlightBboxes={method === 'A' ? detectHighlights : dirtyHighlights}
+                    page={page}
+                    onPageChange={setPage}
+                  />
+                )}
+
+                {method === 'C' && apply && (
+                  <ChangesPanel
+                    sample={sample}
+                    sessionId={apply.session_id}
+                    results={apply.results}
+                  />
+                )}
+              </section>
+
+              {/* right: data panel */}
+              <aside className="min-w-0">
+                <FieldsTable
+                  spans={detect.spans}
+                  values={values}
+                  onChange={(id, v) => setValues((prev) => ({ ...prev, [id]: v }))}
+                  readonly={method === 'A'}
+                  notes={run.notes}
+                />
+              </aside>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }

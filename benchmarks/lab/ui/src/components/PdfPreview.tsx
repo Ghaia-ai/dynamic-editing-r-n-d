@@ -1,91 +1,107 @@
-import { useEffect, useState } from 'react'
-import { cn } from '@/lib/utils'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+type Highlight = { page: number; bbox: [number, number, number, number]; color?: string }
 
 type Props = {
   pageCount: number
   pngUrlForPage: (page: number) => string
-  highlightBboxes?: { page: number; bbox: [number, number, number, number]; color?: string }[]
   pageSizesPt?: [number, number][]
+  highlightBboxes?: Highlight[]
   label?: string
-  initialPage?: number
+  page: number
+  onPageChange: (page: number) => void
 }
 
 export default function PdfPreview({
   pageCount,
   pngUrlForPage,
-  highlightBboxes = [],
   pageSizesPt,
+  highlightBboxes = [],
   label,
-  initialPage = 0,
+  page,
+  onPageChange,
 }: Props) {
-  const [page, setPage] = useState(initialPage)
-  useEffect(() => {
-    setPage(Math.max(0, Math.min(pageCount - 1, initialPage)))
-  }, [initialPage, pageCount])
-
   if (pageCount <= 0) {
-    return <div className="text-sm text-zinc-500">No pages.</div>
+    return <div className="text-[13px] text-[color:var(--ink-muted)]">No pages.</div>
   }
 
-  const pageHighlights = highlightBboxes.filter((h) => h.page === page)
-  const pagePt = pageSizesPt?.[page]
+  const safe = Math.max(0, Math.min(pageCount - 1, page))
+  const here = highlightBboxes.filter((h) => h.page === safe)
+  const pagePt = pageSizesPt?.[safe]
 
   return (
-    <div className="flex flex-col gap-2 h-full">
-      {label && <div className="text-xs uppercase tracking-wider text-zinc-500">{label}</div>}
-      <div className="relative flex-1 min-h-0 rounded-lg border border-zinc-800 bg-zinc-900 overflow-auto">
-        <div className="relative inline-block">
-          <img
-            src={pngUrlForPage(page)}
-            className="block max-w-full h-auto"
-            alt={`page ${page + 1}`}
-          />
-          {pagePt &&
-            pageHighlights.map((h, i) => {
-              const [x0, y0, x1, y1] = h.bbox
-              const [pw, ph] = pagePt
-              return (
-                <div
-                  key={i}
-                  className="absolute pointer-events-none border-2 border-amber-400/80 bg-amber-400/10 rounded-sm"
-                  style={{
-                    left: `${(x0 / pw) * 100}%`,
-                    top: `${(y0 / ph) * 100}%`,
-                    width: `${((x1 - x0) / pw) * 100}%`,
-                    height: `${((y1 - y0) / ph) * 100}%`,
-                    borderColor: h.color ?? undefined,
-                  }}
-                />
-              )
-            })}
+    <div className="flex flex-col gap-2 min-w-0">
+      {label && (
+        <div className="flex items-baseline justify-between">
+          <span className="text-[11px] uppercase tracking-wider text-[color:var(--ink-muted)]">
+            {label}
+          </span>
+          <span className="text-[11px] text-[color:var(--ink-muted)] tabular-nums">
+            page {safe + 1} / {pageCount}
+          </span>
+        </div>
+      )}
+      <div className="relative rounded-md border border-[color:var(--line)] bg-white shadow-sm overflow-hidden">
+        <div className="checker">
+          <div className="relative inline-block w-full">
+            <img
+              src={pngUrlForPage(safe)}
+              className="block w-full h-auto"
+              alt={`page ${safe + 1}`}
+            />
+            {pagePt &&
+              here.map((h, i) => {
+                const [x0, y0, x1, y1] = h.bbox
+                const [pw, ph] = pagePt
+                const color = h.color ?? 'var(--accent)'
+                return (
+                  <div
+                    key={i}
+                    className="absolute pointer-events-none rounded-[2px]"
+                    style={{
+                      left: `${(x0 / pw) * 100}%`,
+                      top: `${(y0 / ph) * 100}%`,
+                      width: `${((x1 - x0) / pw) * 100}%`,
+                      height: `${((y1 - y0) / ph) * 100}%`,
+                      outline: `1.5px solid ${color}`,
+                      backgroundColor: 'color-mix(in srgb, currentColor 0%, transparent)',
+                      boxShadow: `inset 0 0 0 9999px color-mix(in srgb, ${color} 14%, transparent)`,
+                    }}
+                  />
+                )
+              })}
+          </div>
         </div>
       </div>
-      <div className="flex items-center justify-between text-xs text-zinc-400">
-        <button
-          disabled={page === 0}
-          onClick={() => setPage((p) => Math.max(0, p - 1))}
-          className={cn(
-            'flex items-center gap-1 px-2 py-1 rounded border border-zinc-800',
-            page === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-zinc-800',
-          )}
-        >
-          <ChevronLeft className="size-3" /> prev
-        </button>
-        <span>
-          page {page + 1} / {pageCount}
-        </span>
-        <button
-          disabled={page >= pageCount - 1}
-          onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-          className={cn(
-            'flex items-center gap-1 px-2 py-1 rounded border border-zinc-800',
-            page >= pageCount - 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-zinc-800',
-          )}
-        >
-          next <ChevronRight className="size-3" />
-        </button>
-      </div>
+      {pageCount > 1 && (
+        <div className="flex items-center justify-between text-[12px] text-[color:var(--ink-muted)]">
+          <button
+            disabled={safe === 0}
+            onClick={() => onPageChange(Math.max(0, safe - 1))}
+            className={cn(
+              'inline-flex items-center gap-1 px-2 py-1 rounded text-[12px]',
+              safe === 0
+                ? 'opacity-40 cursor-not-allowed'
+                : 'hover:bg-[var(--line-soft)] text-[color:var(--ink-soft)]',
+            )}
+          >
+            <ChevronLeft className="size-3" /> prev
+          </button>
+          <button
+            disabled={safe >= pageCount - 1}
+            onClick={() => onPageChange(Math.min(pageCount - 1, safe + 1))}
+            className={cn(
+              'inline-flex items-center gap-1 px-2 py-1 rounded text-[12px]',
+              safe >= pageCount - 1
+                ? 'opacity-40 cursor-not-allowed'
+                : 'hover:bg-[var(--line-soft)] text-[color:var(--ink-soft)]',
+            )}
+          >
+            next <ChevronRight className="size-3" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }

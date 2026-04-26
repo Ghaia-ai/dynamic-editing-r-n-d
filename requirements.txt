@@ -9,3 +9,15 @@ python-dotenv>=1.0.0
 python-multipart>=0.0.20
 arabic-reshaper>=3.0.0
 python-bidi>=0.4.2
+
+# approach B (HTML roundtrip): pdf2htmlEX is installed via apt in the Dockerfile;
+# pdfminer.six is the fallback HTML extractor; playwright re-renders HTML -> PDF
+pdfminer.six>=20231228
+playwright>=1.48.0
+
+# approach D (vision LLM detector via Gemini)
+google-genai>=0.3.0
+
+# approach E (diffusion glyph inpainting via Replicate)
+replicate>=0.32.0
+httpx>=0.27.0

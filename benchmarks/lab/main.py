@@ -34,6 +34,9 @@ from benchmarks.lab.overlay import (
     apply_edits,
     extract_editable_spans,
 )
+from benchmarks.lab.methods.b_html import run_b
+from benchmarks.lab.methods.d_layout_ai import run_d
+from benchmarks.lab.methods.e_diffusion import run_e
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -463,6 +466,339 @@ def render_session_crop(
     path = _resolve_session_pdf(session_id)
     png = _render_crop_png(path.read_bytes(), page, (x0, y0, x1, y1), pad, dpi)
     return Response(content=png, media_type="image/png")
+
+
+METHOD_DEFINITIONS = [
+    {
+        "id": "A",
+        "name": "Extract",
+        "tagline": "Detect numeric / percent / Arabic spans by walking the PDF text dictionary.",
+        "implementation": "live",
+        "what_runs": "PyMuPDF get_text('dict') + a regex classifier — same detector that feeds Approach C.",
+        "what_lab_shows": "Every span surfaced on the original PDF with bbox highlight, plus the structured table (page, font, size, colour, editable yes/no).",
+        "limits": "Detects what's literally in the text stream. Outlined glyphs, image text, and fragmented Tj runs are missed by definition.",
+        "verdict": "Useful as a detector. Cannot stand alone as an editor.",
+    },
+    {
+        "id": "B",
+        "name": "HTML roundtrip",
+        "tagline": "Convert PDF → HTML, edit, re-render to PDF.",
+        "implementation": "live",
+        "what_runs": "pdf2htmlEX (AGPL) when present, pdfminer.six fallback. Playwright re-renders the HTML back to PDF and we measure full-page SSIM against the original.",
+        "what_lab_shows": "The chosen backend, the converted HTML preview, the re-rendered PDF preview, and the per-page SSIM score so you can compare round-trip fidelity to Approach C's masked SSIM.",
+        "limits": "pdf2htmlEX is AGPL-3.0 — production needs legal review. pdfminer.six is MIT but produces semantic-only HTML at much lower fidelity. Round-trip drops embedded fonts; Chrome's fallback fonts shift metrics.",
+        "verdict": "Open as escape hatch only if Approach C fails on a real upload. Not a v1 candidate.",
+    },
+    {
+        "id": "C",
+        "name": "Overlay",
+        "tagline": "Detect span → cover with colour-matched rect → redraw new value at the same bbox in the same font.",
+        "implementation": "live",
+        "what_runs": "Ports the production npc-pr-agent PDFEditor. Per-span font + colour + ascender/descender-trimmed cover. Latin via insert_text; Arabic via insert_htmlbox + Archive (HarfBuzz shapes).",
+        "what_lab_shows": "Type a value, click generate, get an edited PDF back. Side-by-side preview, zoomed before/after crops, downloadable PDF.",
+        "limits": "Glyph coverage on subset fonts. Photographic/gradient backgrounds (cover-rect sampler is luminance-aware on solids).",
+        "verdict": "Chosen. Both Latin and Arabic working on both samples; masked SSIM > 0.9998 on non-edited regions.",
+    },
+    {
+        "id": "D",
+        "name": "Layout-AI",
+        "tagline": "Vision LLM (Gemini 2.5 Flash) labels editable regions on the rendered page image.",
+        "implementation": "live",
+        "what_runs": "Gemini 2.5 Flash via google-genai with a strict JSON schema (bbox + text + kind + confidence). Live when GEMINI_API_KEY is set; otherwise the panel shows what would run and how to enable it.",
+        "what_lab_shows": "Detected fields with bboxes drawn over the page, confidence scores, kind (numeric/percent/date/label/headline/other), and an Arabic flag.",
+        "limits": "Tokens per page (~$0.003 with Flash). Hallucinated bboxes need a sanity pass before driving overlay edits. Vendor-bound — Azure Document Intelligence is the inside-perimeter equivalent for production.",
+        "verdict": "Useful as a primitive when the cheap regex detector misses. Not v1 critical.",
+    },
+    {
+        "id": "E",
+        "name": "Diffusion glyph inpainting",
+        "tagline": "Replicate-hosted stable-diffusion-inpainting for the cases overlay can't handle.",
+        "implementation": "live",
+        "what_runs": "stable-diffusion-inpainting on Replicate. The lab renders the page, builds a binary mask over the edit bbox, and submits it. Live when REPLICATE_API_TOKEN is set; otherwise the panel still shows the page and mask the lab would have submitted.",
+        "what_lab_shows": "The rendered source page, the mask the model receives, and the inpainted result image (when configured).",
+        "limits": "GPU-cost per call (~$0.012 at typical resolution). stable-diffusion-inpainting is not the strongest text-aware model — AnyText2 is, but Replicate doesn't host AnyText2 today. Style-drift around edits is real.",
+        "verdict": "Surveyed. Useful for photographic / gradient backgrounds where Approach C's cover-rect sampler fails. Not a v1 candidate — a spike, with this lab as the harness.",
+    },
+    {
+        "id": "F",
+        "name": "Apryse / commercial SDK",
+        "tagline": "Apryse WebViewer — the commercial WYSIWYG baseline embedded in-lab.",
+        "implementation": "live",
+        "what_runs": "Apryse WebViewer (CDN, demo key) loads the selected sample directly. The user gets the full WYSIWYG editor — text edit, redact, annotate — running inside the lab on the same PDFs Approach C operates on. Output is watermarked unless a paid Apryse licence is added.",
+        "what_lab_shows": "The WebViewer iframe with the sample loaded. Click around. Try editing the same numbers Approach C handles. Compare ergonomics and fidelity directly against Approach C's tab.",
+        "limits": "Demo key watermarks output. Production licence is $15–50k/yr typical. Same primitive as Approach C — productized, not novel; this tab is the 'baseline to beat' the survey called for.",
+        "verdict": "Worth the eyeball comparison. Not worth the licence without a measured win.",
+    },
+]
+
+
+def _method_def(method_id: str) -> dict:
+    for m in METHOD_DEFINITIONS:
+        if m["id"] == method_id.upper():
+            return m
+    raise HTTPException(status_code=404, detail=f"unknown method {method_id!r}")
+
+
+class MethodRunRequest(BaseModel):
+    sample: str
+    edits: list[EditIn] = Field(default_factory=list)
+
+
+class MethodRunResponse(BaseModel):
+    method_id: str
+    name: str
+    implementation: str  # "live" | "stub"
+    sample: str
+    page_count: int
+    page_sizes: list[tuple[float, float]]
+    # for live methods that return our spans/edits shape (A, C):
+    detect: DetectResponse | None = None
+    apply: ApplyResponse | None = None
+    # for live methods that return a method-specific shape (B, D, E, F):
+    method_result: dict | None = None
+    # for both:
+    notes: list[str] = Field(default_factory=list)
+    # static evidence panel — always returned so the UI has it for context:
+    evidence: dict | None = None
+
+
+@app.get("/api/methods")
+def list_methods():
+    return {"methods": METHOD_DEFINITIONS}
+
+
+@app.post("/api/methods/{method_id}/run", response_model=MethodRunResponse)
+def run_method(method_id: str, req: MethodRunRequest):
+    m = _method_def(method_id)
+    sample_path = _resolve_sample(req.sample)
+    pdf_bytes = sample_path.read_bytes()
+    page_sizes = _page_sizes(pdf_bytes)
+    page_count = len(page_sizes)
+
+    if m["id"] == "A":
+        # detect-only
+        spans = extract_editable_spans(pdf_bytes)
+        detect_resp = DetectResponse(
+            sample=req.sample,
+            page_count=page_count,
+            page_sizes=page_sizes,
+            spans=[
+                SpanOut(
+                    id=f"s{i}",
+                    page=s.page,
+                    bbox=s.bbox,
+                    text=s.text,
+                    font=s.font,
+                    fontsize=s.fontsize,
+                    color=s.color,
+                    is_arabic=s.is_arabic,
+                    editable=s.editable,
+                    kind=s.kind,
+                )
+                for i, s in enumerate(spans)
+            ],
+        )
+        return MethodRunResponse(
+            method_id="A",
+            name=m["name"],
+            implementation="live",
+            sample=req.sample,
+            page_count=page_count,
+            page_sizes=page_sizes,
+            detect=detect_resp,
+            notes=[
+                f"Detected {len(spans)} spans; {sum(1 for s in spans if s.editable)} flagged editable.",
+                "No edits attempted in this method — Approach A is a detector only.",
+            ],
+        )
+
+    if m["id"] == "C":
+        # full pipeline: detect, then optionally apply if edits present
+        spans = extract_editable_spans(pdf_bytes)
+        detect_resp = DetectResponse(
+            sample=req.sample,
+            page_count=page_count,
+            page_sizes=page_sizes,
+            spans=[
+                SpanOut(
+                    id=f"s{i}",
+                    page=s.page,
+                    bbox=s.bbox,
+                    text=s.text,
+                    font=s.font,
+                    fontsize=s.fontsize,
+                    color=s.color,
+                    is_arabic=s.is_arabic,
+                    editable=s.editable,
+                    kind=s.kind,
+                )
+                for i, s in enumerate(spans)
+            ],
+        )
+        apply_resp: ApplyResponse | None = None
+        if req.edits:
+            edits = [
+                EditRequest(
+                    page=e.page,
+                    bbox=e.bbox,
+                    original_text=e.original_text,
+                    new_text=e.new_text,
+                )
+                for e in req.edits
+            ]
+            out_bytes, results = apply_edits(pdf_bytes, edits)
+            session_id = uuid.uuid4().hex[:12]
+            (SESSIONS_DIR / f"{session_id}.pdf").write_bytes(out_bytes)
+            apply_resp = ApplyResponse(
+                session_id=session_id,
+                page_count=len(_page_sizes(out_bytes)),
+                results=[
+                    ApplyResultOut(
+                        page=r.page,
+                        original_text=r.original_text,
+                        new_text=r.new_text,
+                        ok=r.ok,
+                        replacements=r.replacements,
+                        error=r.error,
+                        trace=r.trace if r.trace else None,
+                    )
+                    for r in results
+                ],
+            )
+        return MethodRunResponse(
+            method_id="C",
+            name=m["name"],
+            implementation="live",
+            sample=req.sample,
+            page_count=page_count,
+            page_sizes=page_sizes,
+            detect=detect_resp,
+            apply=apply_resp,
+            notes=[
+                f"Detected {len(spans)} spans.",
+                f"{len(req.edits)} edit(s) applied." if req.edits else "Type a value into the table and run again to apply.",
+            ],
+        )
+
+    # live methods: B, D, E, F
+    if m["id"] == "B":
+        import asyncio
+
+        work_dir = SESSIONS_DIR / f"b_{uuid.uuid4().hex[:12]}"
+        result = asyncio.run(run_b(sample_path, work_dir))
+        return MethodRunResponse(
+            method_id="B",
+            name=m["name"],
+            implementation="live",
+            sample=req.sample,
+            page_count=page_count,
+            page_sizes=page_sizes,
+            evidence={
+                "tagline": m["tagline"],
+                "what_runs": m["what_runs"],
+                "what_lab_shows": m["what_lab_shows"],
+                "limits": m["limits"],
+                "verdict": m["verdict"],
+            },
+            method_result=result,
+            notes=[
+                f"Backend used: {result['backend']}.",
+                *(result.get("notes") or []),
+            ],
+        )
+
+    if m["id"] == "D":
+        result = run_d(sample_path, page_index=0)
+        notes = [f"Vision LLM: {result.get('vendor')}."]
+        if result.get("live"):
+            notes.append(
+                f"Detected {result.get('field_count', 0)} editable fields on page 1 in {result.get('elapsed_seconds')}s."
+            )
+        else:
+            notes.append(result.get("message", "Not configured."))
+        return MethodRunResponse(
+            method_id="D",
+            name=m["name"],
+            implementation="live",
+            sample=req.sample,
+            page_count=page_count,
+            page_sizes=page_sizes,
+            evidence={
+                "tagline": m["tagline"],
+                "what_runs": m["what_runs"],
+                "what_lab_shows": m["what_lab_shows"],
+                "limits": m["limits"],
+                "verdict": m["verdict"],
+            },
+            method_result=result,
+            notes=notes,
+        )
+
+    if m["id"] == "E":
+        # If user passed an edit, use its bbox; else default to a centred bbox on page 0
+        if req.edits:
+            ed = req.edits[0]
+            page_idx, bbox, new_text = ed.page, ed.bbox, ed.new_text
+        else:
+            pw, ph = page_sizes[0]
+            page_idx = 0
+            bbox = (pw * 0.4, ph * 0.45, pw * 0.6, ph * 0.55)
+            new_text = "EXAMPLE"
+        result = run_e(sample_path, page_idx, bbox, new_text)
+        notes = [f"Vendor: {result.get('vendor')}."]
+        if result.get("live"):
+            notes.append(
+                f"Inpainted in {result.get('elapsed_seconds')}s; estimated cost ~${result.get('estimated_cost_usd', 0):.3f}."
+            )
+        else:
+            notes.append(result.get("message", "Not configured."))
+        return MethodRunResponse(
+            method_id="E",
+            name=m["name"],
+            implementation="live",
+            sample=req.sample,
+            page_count=page_count,
+            page_sizes=page_sizes,
+            evidence={
+                "tagline": m["tagline"],
+                "what_runs": m["what_runs"],
+                "what_lab_shows": m["what_lab_shows"],
+                "limits": m["limits"],
+                "verdict": m["verdict"],
+            },
+            method_result=result,
+            notes=notes,
+        )
+
+    if m["id"] == "F":
+        # Apryse WebViewer is purely client-side; the backend just hands the UI
+        # the sample's PDF URL and a marker so the UI knows to render the iframe.
+        return MethodRunResponse(
+            method_id="F",
+            name=m["name"],
+            implementation="live",
+            sample=req.sample,
+            page_count=page_count,
+            page_sizes=page_sizes,
+            evidence={
+                "tagline": m["tagline"],
+                "what_runs": m["what_runs"],
+                "what_lab_shows": m["what_lab_shows"],
+                "limits": m["limits"],
+                "verdict": m["verdict"],
+            },
+            method_result={
+                "viewer": "apryse",
+                "pdf_url": f"/api/samples/{req.sample}/pdf",
+                "demo": True,
+            },
+            notes=[
+                "Apryse WebViewer loads via CDN inside the iframe — first interaction may take a few seconds while it pulls the worker bundles.",
+                "Demo licence watermarks output. To remove, set APRYSE_LICENSE_KEY in .env.",
+            ],
+        )
+
+    raise HTTPException(status_code=400, detail=f"method {m['id']} dispatch not implemented")
 
 
 @app.get("/api/findings")

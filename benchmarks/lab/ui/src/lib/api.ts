@@ -1,4 +1,11 @@
-import type { ApplyResponse, DetectResponse, Sample } from './types'
+import type {
+  ApplyResponse,
+  DetectResponse,
+  MethodDef,
+  MethodId,
+  MethodRunResponse,
+  Sample,
+} from './types'
 
 async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init)
@@ -16,6 +23,22 @@ async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function listSamples(): Promise<{ samples: Sample[] }> {
   return jsonFetch('/api/samples')
+}
+
+export function listMethods(): Promise<{ methods: MethodDef[] }> {
+  return jsonFetch('/api/methods')
+}
+
+export function runMethod(
+  methodId: MethodId,
+  sample: string,
+  edits: { page: number; bbox: [number, number, number, number]; original_text: string; new_text: string }[] = [],
+): Promise<MethodRunResponse> {
+  return jsonFetch(`/api/methods/${methodId}/run`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sample, edits }),
+  })
 }
 
 export function samplePagePngUrl(name: string, page: number, dpi = 150): string {
@@ -42,6 +65,7 @@ export function sessionCropUrl(sessionId: string, page: number, bbox: [number, n
   return `/api/sessions/${sessionId}/crop/${page}.png?${bboxQuery(bbox)}`
 }
 
+// Legacy direct endpoints — used by legacy parts of the UI; new flow is /api/methods.
 export function detect(sample: string): Promise<DetectResponse> {
   return jsonFetch('/api/detect', {
     method: 'POST',

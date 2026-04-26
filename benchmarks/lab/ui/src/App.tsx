@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Beaker, ScrollText } from 'lucide-react'
 import Lab from '@/components/Lab'
 import Findings from '@/components/Findings'
 import { cn } from '@/lib/utils'
@@ -10,63 +9,53 @@ export default function App() {
   const [view, setView] = useState<View>('lab')
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex">
-      <aside className="w-48 shrink-0 border-r border-zinc-900 bg-zinc-950 flex flex-col">
-        <div className="px-4 py-4 border-b border-zinc-900">
-          <div className="text-sm font-semibold tracking-tight">Dynamic PDF Lab</div>
-          <div className="text-[10px] uppercase tracking-wider text-zinc-500 mt-0.5">
-            Phase-3 R&D
+    <div className="min-h-screen flex flex-col bg-[var(--canvas)] text-[color:var(--ink)]">
+      <header className="bg-[var(--surface)] border-b border-[color:var(--line)]">
+        <div className="max-w-[1400px] mx-auto px-8 py-4 flex items-center justify-between gap-8">
+          <div className="flex items-baseline gap-3">
+            <div className="text-[15px] font-semibold tracking-tight">
+              Dynamic PDF Editing Lab
+            </div>
+            <div className="text-[12px] text-[color:var(--ink-muted)]">
+              R&D · Phase 3
+            </div>
           </div>
+          <nav className="flex gap-1">
+            <ViewTab active={view === 'lab'} onClick={() => setView('lab')}>
+              Lab
+            </ViewTab>
+            <ViewTab active={view === 'findings'} onClick={() => setView('findings')}>
+              Findings
+            </ViewTab>
+          </nav>
         </div>
-        <nav className="p-2 space-y-1 flex-1">
-          <NavButton
-            active={view === 'lab'}
-            onClick={() => setView('lab')}
-            icon={<Beaker className="size-4" />}
-          >
-            Lab
-          </NavButton>
-          <NavButton
-            active={view === 'findings'}
-            onClick={() => setView('findings')}
-            icon={<ScrollText className="size-4" />}
-          >
-            Findings
-          </NavButton>
-        </nav>
-        <div className="p-3 text-[10px] text-zinc-600 border-t border-zinc-900">
-          Approach C · overlay engine · Latin + Arabic
-        </div>
-      </aside>
-      <div className="flex-1 min-w-0 overflow-auto">
+      </header>
+      <main className="flex-1 min-h-0 flex flex-col">
         {view === 'lab' ? <Lab /> : <Findings />}
-      </div>
+      </main>
     </div>
   )
 }
 
-function NavButton({
+function ViewTab({
   active,
   onClick,
-  icon,
   children,
 }: {
   active: boolean
   onClick: () => void
-  icon: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        'w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors',
+        'text-[13px] px-3 py-1.5 rounded-md transition-colors',
         active
-          ? 'bg-amber-500/10 text-amber-200 border border-amber-500/30'
-          : 'text-zinc-400 hover:bg-zinc-900 border border-transparent',
+          ? 'bg-[var(--accent-soft)] text-[color:var(--accent-ink)]'
+          : 'text-[color:var(--ink-soft)] hover:bg-[var(--line-soft)]',
       )}
     >
-      {icon}
       {children}
     </button>
   )
