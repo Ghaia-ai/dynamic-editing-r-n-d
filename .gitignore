@@ -33,7 +33,7 @@ research/raw/**/*.zip
 research/raw/**/*.mp4
 
 # generated pdfs / renders from experiments
-reports/out/
+# reports/out/ -- intentionally tracked so non-technical reviewers can read the compiled report without running typst
 diagrams/out/
 
 # os / editor
